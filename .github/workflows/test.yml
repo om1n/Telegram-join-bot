@@ -17,4 +17,6 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - name: Setup Wrangler Config
+        run: cp wrangler.toml.example wrangler.toml
       - run: npm test
