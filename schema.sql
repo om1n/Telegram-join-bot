@@ -11,7 +11,8 @@ CREATE TABLE requests (
 	answer_date INTEGER,
 	confirmed_date INTEGER,
 	reminder_3_sent INTEGER DEFAULT 0,
-	reminder_6_sent INTEGER DEFAULT 0
+	reminder_6_sent INTEGER DEFAULT 0,
+	last_reminder_ts INTEGER
   );
   
   CREATE TABLE events (
