@@ -166,3 +166,6 @@ dist
 !.env.example
 .wrangler/
 wrangler.toml
+
+# macOS
+.DS_Store
