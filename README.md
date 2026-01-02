@@ -46,6 +46,19 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
    wrangler secret put ADMIN_USER_ID
    ```
 
+### Hardcoded Configs
+
+The following settings can be adjusted in `src/config.js`:
+
+| Constant | Default | Description |
+| :--- | :--- | :--- |
+| `LANGUAGE` | `'ru'` | Bot language (`'ru'` or `'en'`). |
+| `REQUEST_EXPIRY_DAYS` | `7` | Days before a pending request is auto-rejected. |
+| `DAILY_REMINDER_INTERVAL_HOURS` | `23.1` | Hours between reminder messages to users. |
+| `SPAM_BAN_ATTEMPTS` | `5` | Number of repeatedly cancelled/new requests before ban. |
+| `SPAM_WARNING_ATTEMPTS_START` | `3` | Attempt count to start sending spam warnings. |
+| `MAX_MESSAGE_LENGTH` | `2000` | Max length for user answers (truncated otherwise). |
+
 ### Data Privacy
 
 This bot stores user data (ID, username, display name, request history) in a D1 database to function.

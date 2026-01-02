@@ -1,7 +1,7 @@
 export const CONFIG = {
     // Database timeouts
     REQUEST_EXPIRY_DAYS: 7,
-    DAILY_REMINDER_INTERVAL_HOURS: 24,
+    DAILY_REMINDER_INTERVAL_HOURS: 23.1,
 
     // Language: 'ru' or 'en'
     LANGUAGE: 'ru',

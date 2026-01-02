@@ -8,7 +8,7 @@ export async function processRemindersAndTimeouts(env) {
     const stats = { remindersSent: 0, timeoutsProcessed: 0, errors: [] };
 
     // Daily reminders
-    const oneDayAgo = now - 24 * 3600;
+    const oneDayAgo = now - Math.floor(CONFIG.DAILY_REMINDER_INTERVAL_HOURS * 3600);
     const rowsRemind = await db.prepare(`
     SELECT * FROM requests 
     WHERE request_date <= ? 
