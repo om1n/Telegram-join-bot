@@ -10,8 +10,8 @@
 		"tail": "wrangler tail --format=pretty"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.8.19",
-		"vitest": "~3.2.0",
-		"wrangler": "^4.56.0"
+		"@cloudflare/vitest-pool-workers": "^0.11.1",
+		"vitest": "^3.2.4",
+		"wrangler": "^4.54.0"
 	}
 }
