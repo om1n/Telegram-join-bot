@@ -9,7 +9,22 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 - **Timeouts**: Specifically handles request expiration (7 days).
 - **Reminders**: Sends daily reminders if the user has not answered questions.
 - **Spam Protection**: Detects and bans users who repeatedly spam join requests.
+  - **Warnings**: Users receive a warning after 3 cancelled/new attempts.
+  - **Ban**: Users are automatically banned from the group after 5 attempts.
+- **Welcome Message**: Sends a welcome message to the user upon being added to the group.
+- **Member Notifications**: Notifies the moderator chat when a new member is successfully added.
+- **Localization**: Supports multiple languages (Default: Russian `ru`, English `en` available).
 - **Robust Error Handling**: Handles cases where users are missing or requests are revoked (`user_missing_or_banned`, `request_no_longer_valid`).
+
+## User Guide (Interaction Flow)
+
+1.  **Request**: User requests to join the Telegram group.
+2.  **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
+3.  **Answer**: The user replies with their answers in a single message.
+4.  **Confirmation**: The bot shows the user their answer and asks for confirmation ("Yes" or "No").
+    -   **Yes**: The answer is confirmed and forwarded to the moderators.
+    -   **No**: The user can rewrite their answer.
+5.  **Approval**: Moderators review the request. If approved, the user is added to the group and receives a welcome message.
 
 ## Setup
 
@@ -18,6 +33,13 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 - Cloudflare Account (Workers & D1)
 - Telegram Bot Token
 - Node.js & npm
+
+### Bot Permissions
+
+To function correctly, the bot must be an Administrator in the target group with the following permissions:
+- **Ban Users**: Required for the Spam Protection feature to ban repeat offenders.
+- **Approve Join Requests**: Required (implicit for admins) to manage the requests.
+- **Send Messages**: Required in the Moderator Chat to send notifications.
 
 ### Database
 
@@ -77,6 +99,7 @@ npm run deploy
 
 Send these commands to the bot in a private chat (must be `ADMIN_USER_ID`):
 
+- `/help`: Show the list of available admin commands.
 - `/status`: Show count of pending requests.
 - `/pending`: List recent pending requests.
 - `/config`: Show current configuration (IDs).
