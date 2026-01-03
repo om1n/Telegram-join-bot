@@ -18,13 +18,13 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 
 ## User Guide (Interaction Flow)
 
-1.  **Request**: User requests to join the Telegram group.
-2.  **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
-3.  **Answer**: The user replies with their answers in a single message.
-4.  **Confirmation**: The bot shows the user their answer and asks for confirmation ("Yes" or "No").
-    -   **Yes**: The answer is confirmed and forwarded to the moderators.
-    -   **No**: The user can rewrite their answer.
-5.  **Approval**: Moderators review the request. If approved, the user is added to the group and receives a welcome message.
+1. **Request**: User requests to join the Telegram group.
+2. **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
+3. **Answer**: The user replies with their answers in a single message.
+4. **Confirmation**: The bot shows the user their answer and asks for confirmation ("Yes" or "No").
+    - **Yes**: The answer is confirmed and forwarded to the moderators.
+    - **No**: The user can rewrite their answer.
+5. **Approval**: Moderators review the request. If approved, the user is added to the group and receives a welcome message.
 
 ## Setup
 
@@ -37,6 +37,7 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 ### Bot Permissions
 
 To function correctly, the bot must be an Administrator in the target group with the following permissions:
+
 - **Ban Users**: Required for the Spam Protection feature to ban repeat offenders.
 - **Approve Join Requests**: Required (implicit for admins) to manage the requests.
 - **Send Messages**: Required in the Moderator Chat to send notifications.
