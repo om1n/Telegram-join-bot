@@ -32,3 +32,41 @@ export function fullname(from) {
     if (from.last_name) parts.push(from.last_name);
     return parts.join(' ');
 }
+
+/**
+ * Fetch chat information from Telegram API
+ * @param {string} chatId - Chat ID to fetch info for
+ * @param {object} env - Environment variables with TELEGRAM_BOT_TOKEN
+ * @returns {Promise<object|null>} Chat object or null on error
+ */
+export async function getChatInfo(chatId, env) {
+    try {
+        const result = await sendToTelegram('getChat', { chat_id: chatId }, env);
+        if (result.ok) {
+            return result.result;
+        }
+        console.error('Failed to get chat info:', result);
+        return null;
+    } catch (error) {
+        console.error('Error fetching chat info:', error);
+        return null;
+    }
+}
+
+/**
+ * Format group link for messages
+ * For public groups (with username): creates clickable Telegram link
+ * For private groups: returns escaped title only
+ * @param {string} chatId - Chat ID
+ * @param {string} title - Chat title (already escaped)
+ * @param {string} username - Chat username (optional)
+ * @returns {string} Formatted group link or title
+ */
+export function formatGroupLink(chatId, title, username) {
+    if (username) {
+        // Public group - create clickable link
+        return `[${title}](https://t.me/${username})`;
+    }
+    // Private group - return title in bold
+    return `*${title}*`;
+}

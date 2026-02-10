@@ -1,5 +1,5 @@
 import { MESSAGES } from '../messages.js';
-import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
+import { sendToTelegram, escapeMarkdownLegacy, formatGroupLink } from '../services/telegram.js';
 
 export async function handleChatMember(cm, env) {
     const newStatus = cm.new_chat_member?.status;
@@ -38,9 +38,12 @@ export async function handleChatMember(cm, env) {
             const safeUser = { ...user, first_name: escapeMarkdownLegacy(user.first_name), last_name: escapeMarkdownLegacy(user.last_name), username: escapeMarkdownLegacy(user.username) };
             const safeAdmin = { ...from, first_name: escapeMarkdownLegacy(from.first_name), last_name: escapeMarkdownLegacy(from.last_name), username: escapeMarkdownLegacy(from.username) };
 
+            const escapedTitle = escapeMarkdownLegacy(chat.title);
+            const groupLink = formatGroupLink(chat.id, escapedTitle, chat.username);
+
             await sendToTelegram('sendMessage', {
                 chat_id: env.MOD_CHAT_ID,
-                text: MESSAGES.moderator.userAdded(safeUser, safeAdmin, escapeMarkdownLegacy(chat.title)),
+                text: MESSAGES.moderator.userAdded(safeUser, safeAdmin, groupLink),
                 parse_mode: 'Markdown'
             }, env);
         } catch (e) {

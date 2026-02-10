@@ -1,6 +1,6 @@
 import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
-import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
+import { sendToTelegram, escapeMarkdownLegacy, getChatInfo, formatGroupLink } from '../services/telegram.js';
 import { processRemindersAndTimeouts } from './cron.js';
 
 export async function handleMessage(msg, env) {
@@ -50,6 +50,16 @@ export async function handleMessage(msg, env) {
             await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
                 .bind(req.id, user_id, 'confirmed', now, JSON.stringify({})).run();
 
+            // Fetch group info for link
+            const chatInfo = await getChatInfo(req.chat_id, env);
+
+            let groupLink = '';
+            if (chatInfo) {
+                const escapedTitle = escapeMarkdownLegacy(chatInfo.title || 'Unknown Group');
+                const username = chatInfo.username;
+                groupLink = formatGroupLink(req.chat_id, escapedTitle, username);
+            }
+
             // Notify Mods
             const profileLink = `tg://user?id=${user_id}`;
             const moderatorMessage = MESSAGES.moderator.newRequest(
@@ -60,7 +70,8 @@ export async function handleMessage(msg, env) {
                 escapeMarkdownLegacy(req.answer_text),
                 escapeMarkdownLegacy(req.chat_id),
                 new Date(req.request_date * 1000).toISOString(),
-                new Date(req.expires_at * 1000).toISOString()
+                new Date(req.expires_at * 1000).toISOString(),
+                groupLink
             );
 
             await sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: moderatorMessage, parse_mode: 'Markdown' }, env);

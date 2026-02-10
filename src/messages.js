@@ -72,27 +72,27 @@ ${answerText}
         },
 
         moderator: {
-            newRequest: (username, displayName, userId, profileLink, answerText, chatId, requestDate, expiresAt) =>
-                `Новая подтверждённая заявка\n
-*Пользователь:* ${username ? '@' + username : displayName}
-*Имя:* ${displayName || ''}
-*User ID:* ${userId}
-*Профиль:* ${profileLink}
-*Текст ответа:*
-${answerText}
-
-*Группа:* ${chatId}
-*Дата подачи:* ${requestDate}
-*Дата истечения:* ${expiresAt}`,
+            newRequest: (username, displayName, userId, profileLink, answerText, chatId, requestDate, expiresAt, groupLink) =>
+                `Новая подтверждённая заявка\n\n` +
+                `*Пользователь:* ${username ? '@' + username : displayName}\n` +
+                `*Имя:* ${displayName || ''}\n` +
+                `*User ID:* ${userId}\n` +
+                `*Профиль:* ${profileLink}\n` +
+                `*Текст ответа:*\n` +
+                `${answerText}\n` +
+                `\n` +
+                `*Группа:* ${chatId}${groupLink ? ', ' + groupLink : ''}\n` +
+                `*Дата подачи:* ${requestDate}\n` +
+                `*Дата истечения:* ${expiresAt}`,
 
             autoReject: (id, username, displayName, userId) =>
                 `Авто-отказ заявки ID:${id} от пользователя ${username ? ('@' + username) : displayName} (ID:${userId}). Причина: автоматический отказ по сроку.`,
 
-            userAdded: (user, admin, groupTitle) =>
+            userAdded: (user, admin, groupLink) =>
                 `🎉 Пользователь добавлен в группу\n\n` +
                 `*Кто:* ${user.first_name}${user.last_name ? ' ' + user.last_name : ''} (${user.username ? '@' + user.username : 'ID:' + user.id})\n` +
                 `*Добавил:* ${admin.first_name}${admin.last_name ? ' ' + admin.last_name : ''} (${admin.username ? '@' + admin.username : 'ID:' + admin.id})\n` +
-                `*Группа:* ${groupTitle}`,
+                `*Группа:* ${groupLink}`,
 
             spamBan: (user, attempts) =>
                 `⛔ **БАН ЗА СПАМ**\n\n` +
@@ -155,27 +155,27 @@ ${answerText}
         },
 
         moderator: {
-            newRequest: (username, displayName, userId, profileLink, answerText, chatId, requestDate, expiresAt) =>
-                `New Confirmed Request\n
-*User:* ${username ? '@' + username : displayName}
-*Name:* ${displayName || ''}
-*User ID:* ${userId}
-*Profile:* ${profileLink}
-*Answer:*
-${answerText}
-
-*Group:* ${chatId}
-*Date:* ${requestDate}
-*Expires:* ${expiresAt}`,
+            newRequest: (username, displayName, userId, profileLink, answerText, chatId, requestDate, expiresAt, groupLink) =>
+                `New Confirmed Request\n\n` +
+                `*User:* ${username ? '@' + username : displayName}\n` +
+                `*Name:* ${displayName || ''}\n` +
+                `*User ID:* ${userId}\n` +
+                `*Profile:* ${profileLink}\n` +
+                `*Answer:*\n` +
+                `${answerText}\n` +
+                `\n` +
+                `*Group:* ${chatId}${groupLink ? ', ' + groupLink : ''}\n` +
+                `*Date:* ${requestDate}\n` +
+                `*Expires:* ${expiresAt}`,
 
             autoReject: (id, username, displayName, userId) =>
                 `Auto-reject ID:${id} user ${username ? ('@' + username) : displayName} (ID:${userId}). Reason: expired.`,
 
-            userAdded: (user, admin, groupTitle) =>
+            userAdded: (user, admin, groupLink) =>
                 `🎉 User added to group\n\n` +
                 `*Who:* ${user.first_name}${user.last_name ? ' ' + user.last_name : ''} (${user.username ? '@' + user.username : 'ID:' + user.id})\n` +
                 `*Added by:* ${admin.first_name}${admin.last_name ? ' ' + admin.last_name : ''} (${admin.username ? '@' + admin.username : 'ID:' + admin.id})\n` +
-                `*Group:* ${groupTitle}`,
+                `*Group:* ${groupLink}`,
 
             spamBan: (user, attempts) =>
                 `⛔ **SPAM BAN**\n\n` +
