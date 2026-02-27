@@ -38,7 +38,13 @@ ${answerText}
 
 И подтвердите, что не будете присылать рекламные сообщения или вакансии.`,
 
-        noPendingRequest: 'У нас нет ожидающей заявки для вас. Если вы подавали заявку, проверьте, пожалуйста, что вы отвечаете с того же аккаунта.',
+        noPendingRequest: `Похоже, активной заявки от вас пока нет 👀
+
+*Хотите вступить?* Нажмите кнопку «Подать заявку на вступление» ниже — бот пришлёт вам анкету.
+
+Это закрытое сообщество продакт-менеджеров и продуктовых специалистов в финтехе. Реклама и спам в группе запрещены.
+
+_Уже подавали заявку? Убедитесь, что пишете с того же аккаунта Telegram._`,
 
         dailyReminder: (daysLeft) => `Напоминание: пожалуйста, ответьте на вопросы для вступления в группу. У вас осталось ${daysLeft} ${daysLeft === 1 ? 'день' : (daysLeft > 1 && daysLeft < 5 ? 'дня' : 'дней')}.`,
         timeoutUser: 'Ваша заявка отклонена автоматически: срок для ответа истёк.',
@@ -121,7 +127,13 @@ ${answerText}
 
         rewriteRequested: `Okay — please write your answer again in a single message:\n1) What do you do?\n2) How are you connected?\n3) Source?\n\nAnd confirm no spam.`,
 
-        noPendingRequest: 'No pending request found for you. If you applied, please check you are using the same account.',
+        noPendingRequest: `Looks like there's no active request from you yet 👀
+
+*Want to join?* Click the «Request to Join» button below — the bot will send you a questionnaire.
+
+This is a closed community for product managers and product specialists in fintech. Spam and advertising are strictly prohibited.
+
+_Already applied? Make sure you're writing from the same Telegram account._`,
 
         dailyReminder: (daysLeft) => `Reminder: please answer the questions to join the group. You have ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left.`,
         timeoutUser: 'Your request was automatically rejected: time expired.',

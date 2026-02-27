@@ -18,6 +18,8 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 
 ## User Guide (Interaction Flow)
 
+> **No active request?** If a user messages the bot without a pending join request, the bot will explain what the group is about and show an inline button **"📨 Подать заявку на вступление"** linking directly to the group ([t.me/fintechprod](https://t.me/fintechprod)), where they can tap *Request to Join* to start the flow.
+
 1. **Request**: User requests to join the Telegram group.
 2. **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
 3. **Answer**: The user replies with their answers in a single message.

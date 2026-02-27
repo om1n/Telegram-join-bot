@@ -26,7 +26,16 @@ export async function handleMessage(msg, env) {
     const req = pending.results && pending.results[0] ? pending.results[0] : null;
 
     if (!req) {
-        await sendToTelegram('sendMessage', { chat_id: user_id, text: MESSAGES.noPendingRequest }, env);
+        await sendToTelegram('sendMessage', {
+            chat_id: user_id,
+            text: MESSAGES.noPendingRequest,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '📨 Подать заявку на вступление', url: 'https://t.me/fintechprod' }
+                ]]
+            }
+        }, env);
         return;
     }
 
