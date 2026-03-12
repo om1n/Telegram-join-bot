@@ -22,11 +22,11 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 
 1. **Request**: User requests to join the Telegram group.
 2. **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
-3. **Answer**: The user replies with their answers in a single message.
+3. **Answer**: The user replies with their answers in a single message. **Note:** Answers are accepted *strictly* via Direct Messages (DMs). Messages exceeding 2000 characters will be automatically truncated.
 4. **Confirmation**: The bot shows the user their answer and asks for confirmation ("Yes" or "No").
     - **Yes**: The answer is confirmed and forwarded to the moderators.
     - **No**: The user can rewrite their answer.
-5. **Approval**: Moderators review the request. If approved, the user is added to the group and receives a welcome message.
+5. **Approval**: The bot forwards the questionnaire to the moderator group as text. Moderators review it and must use Telegram's built-in "Join Requests" UI (the banner in the group/channel) to approve or reject the user. The bot does not provide inline approval buttons.
 
 ## Setup
 
@@ -35,6 +35,14 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 - Cloudflare Account (Workers & D1)
 - Telegram Bot Token
 - Node.js & npm
+
+### BotFather Setup
+
+Configure your bot via [@BotFather](https://t.me/BotFather) before starting:
+
+1. **Token**: Create a new bot to get your `<TELEGRAM_BOT_TOKEN>`.
+2. **Privacy Mode**: Disable Privacy Mode (`/setprivacy` -> Disable) to ensure the bot can read messages properly if added to other context groups.
+3. **Groups**: Ensure the bot can be added to groups (`/setjoingroups` -> Enable).
 
 ### Bot Permissions
 
@@ -54,6 +62,8 @@ To function correctly, the bot must be an Administrator in the target group with
    wrangler d1 execute joinbot --file=./schema.sql
    ```
 
+> **Migrations**: D1 supports migrations. For future updates, apply schema changes using Wrangler's migration system or run specific `ALTER TABLE` commands. Avoid simply re-running `schema.sql` on a production database to prevent data loss.
+
 ### Configuration
 
 1. Copy the example configuration:
@@ -63,7 +73,8 @@ To function correctly, the bot must be an Administrator in the target group with
    ```
 
 2. Edit `wrangler.toml` to add your `database_id`.
-3. Set the following secrets:
+3. **Cron Triggers**: Ensure the `[triggers]` block is uncommented/configured in your `wrangler.toml` (see `wrangler.toml.example`). Without this configuring to `crons = ["0 * * * *"]`, automated tasks (reminders, timeouts) will not execute.
+4. Set the following secrets:
 
    ```bash
    wrangler secret put TELEGRAM_BOT_TOKEN
@@ -98,6 +109,12 @@ npm install
 npm run deploy
 ```
 
+**Crucial Step: Set Webhook**
+After deployment, explicitly tell Telegram to route events to your Cloudflare Worker:
+```bash
+curl "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook?url=https://<YOUR_WORKER_URL>"
+```
+
 ## Admin Commands
 
 Send these commands to the bot in a private chat (must be `ADMIN_USER_ID`):
@@ -107,7 +124,7 @@ Send these commands to the bot in a private chat (must be `ADMIN_USER_ID`):
 - `/pending`: List recent pending requests.
 - `/config`: Show current configuration (IDs).
 - `/force_cron`: Manually trigger the scheduled task (reminders/timeouts) and see detailed execution logs.
-- `/reject <user_id>`: Manually reject a user's request (marks as rejected in DB).
+- `/reject <user_id>`: Manually reject a user's request. This actively calls `declineChatJoinRequest` in Telegram API to deny entry, in addition to marking it rejected in the DB.
 - `/cleanup`: Remove duplicate superseded requests (maintenance).
 
 > **Security Note**: These commands are strictly protected. They can ONLY be executed by the user with `ADMIN_USER_ID`. Commands sent by any other user will be silently ignored to prevent information leakage or spam.
