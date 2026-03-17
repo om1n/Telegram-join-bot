@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx wrangler:*)",
+      "Read(//Users/antonfrolov/.local/**)",
+      "Read(//Users/antonfrolov/.bun/**)",
+      "Bash(zsh -i -c \"which node npx wrangler\")",
+      "Bash(zsh -l -c \"which node npx wrangler\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
