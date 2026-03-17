@@ -23,9 +23,10 @@ This Cloudflare Worker bot manages join requests for a Telegram group. It screen
 1. **Request**: User requests to join the Telegram group.
 2. **Screening**: The bot initiates a private chat (DM) with the user and asks the configured questions.
 3. **Answer**: The user replies with their answers in a single message. **Note:** Answers are accepted *strictly* via Direct Messages (DMs). Messages exceeding 2000 characters will be automatically truncated.
-4. **Confirmation**: The bot shows the user their answer and asks for confirmation ("Yes" or "No").
-    - **Yes**: The answer is confirmed and forwarded to the moderators.
-    - **No**: The user can rewrite their answer.
+4. **Confirmation**: The bot shows the user their answer and asks for confirmation via an inline button ("Отправить ответ") or by typing "Yes" / "Да".
+    - **Confirmed**: The answer is confirmed and forwarded to the moderators.
+    - **Auto-forward**: If the user forgets to click/type after 1 hour, the request is automatically forwarded to the moderators.
+    - **Rejected (Rewrite)**: If the user types anything other than "Yes", they can rewrite their answer.
 5. **Approval**: The bot forwards the questionnaire to the moderator group as text. Moderators review it and must use Telegram's built-in "Join Requests" UI (the banner in the group/channel) to approve or reject the user. The bot does not provide inline approval buttons.
 
 ## Setup

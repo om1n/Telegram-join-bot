@@ -12,7 +12,7 @@ const translations = {
 
 Кроме того, подтвердите, что не будете присылать рекламные сообщения или вакансии (напишите об этом в ответе).
 
-После отправки ответа бот спросит, отправлять ли ваш ответ модераторам — напишите *"Да"* чтобы передать.
+После отправки ответа бот спросит, отправлять ли ваш ответ модераторам — нажмите кнопку под сообщением или напишите *"Да"* чтобы передать.
 
 Пожалуйста, ответьте в течение недели (бот будет напоминать об этом), иначе ваша заявка будет отклонена.`,
 
@@ -27,7 +27,10 @@ const translations = {
 
 ${answerText}
 
-Отправлять этот ответ модераторам? Напишите *"Да"* и я передам, или ответьте на вопросы ещё раз.`,
+Отправлять этот ответ модераторам? Нажмите кнопку ниже или напишите *"Да"*, и я передам, либо ответьте на вопросы ещё раз.`,
+        
+        confirmButtonText: 'Отправить ответ',
+        autoForwardedMessage: '⏳ Прошел час, поэтому ваш ответ был автоматически передан модераторам на рассмотрение.',
 
         sentToModerators: 'Спасибо — ваш ответ отправлен модераторам.',
 
@@ -115,13 +118,16 @@ _Уже подавали заявку? Убедитесь, что пишете �
     },
 
     en: {
-        questions: (chatTitle) => `Hello! Thank you for your request to join *${chatTitle || 'our group'}*.\n\nPlease answer these three questions in a single message:\n\n1) What do you do?\n2) How are you connected to this topic?\n3) How did you hear about us?\n\nAlso, please confirm that you will not send spam or job ads.\n\nAfter you reply, the bot will ask needed confirmation — type *"Yes"* (or *"Да"*) to send it to moderators.\n\nYou have 7 days to complete this, otherwise the request will be rejected. You will receive daily reminders.`,
+        questions: (chatTitle) => `Hello! Thank you for your request to join *${chatTitle || 'our group'}*.\n\nPlease answer these three questions in a single message:\n\n1) What do you do?\n2) How are you connected to this topic?\n3) How did you hear about us?\n\nAlso, please confirm that you will not send spam or job ads.\n\nAfter you reply, the bot will ask needed confirmation — click the button below the message or type *"Yes"* (or *"Да"*) to send it to moderators.\n\nYou have 7 days to complete this, otherwise the request will be rejected. You will receive daily reminders.`,
 
         spamWarning: (attempt) => `⚠️ Suspicious behavior detected (attempt #${attempt}).\nIf you continue to spam requests, you will be banned permanently.\nPlease answer the questions and wait not for the decision.`,
 
         banned: `⛔ You have been banned for spamming requests.\nDecision is final.`,
 
-        confirmation: (answerText) => `You sent the following answer:\n\n${answerText}\n\nSend this answer to moderators? Type *"Yes"* to confirm, or answer the questions again to rewrite.`,
+        confirmation: (answerText) => `You sent the following answer:\n\n${answerText}\n\nSend this answer to moderators? Click the button below or type *"Yes"* to confirm, or answer the questions again to rewrite.`,
+
+        confirmButtonText: 'Send answer',
+        autoForwardedMessage: '⏳ One hour has passed, so your answer was automatically forwarded to the moderators for review.',
 
         sentToModerators: 'Thank you — your answer has been sent to moderators.',
 

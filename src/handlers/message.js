@@ -2,6 +2,7 @@ import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
 import { sendToTelegram, escapeMarkdownLegacy, getChatInfo, formatGroupLink } from '../services/telegram.js';
 import { processRemindersAndTimeouts } from './cron.js';
+import { confirmRequest } from '../services/confirmation.js';
 
 export async function handleMessage(msg, env) {
     const db = env.DB;
@@ -47,44 +48,28 @@ export async function handleMessage(msg, env) {
         await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
             .bind(req.id, user_id, 'answered', now, JSON.stringify({ answer: text })).run();
 
-        await sendToTelegram('sendMessage', { chat_id: user_id, text: MESSAGES.confirmation(escapeMarkdownLegacy(text)), parse_mode: 'Markdown' }, env);
+        const opts = {
+            chat_id: user_id,
+            text: MESSAGES.confirmation(escapeMarkdownLegacy(text)),
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: MESSAGES.confirmButtonText, callback_data: `confirm_${req.id}` }
+                ]]
+            }
+        };
+        await sendToTelegram('sendMessage', opts, env);
         return;
     }
 
     if (req.status === 'answered') {
         if (/^(да|yes)[\W]*$/i.test(text.trim())) {
-            // Confirm
-            await db.prepare('UPDATE requests SET status = ?, confirmed_date = ? WHERE id = ?')
-                .bind('confirmed', now, req.id).run();
-            await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                .bind(req.id, user_id, 'confirmed', now, JSON.stringify({})).run();
+            // Confirm using imported service
+            // Wrap debug log for info
+            if (env.DEBUG === 'true') console.debug('[DEBUG] Manual text confirmation triggered for user', user_id);
+            else console.info(`User ${user_id} confirmed answer via text`);
 
-            // Fetch group info for link
-            const chatInfo = await getChatInfo(req.chat_id, env);
-
-            let groupLink = '';
-            if (chatInfo) {
-                const escapedTitle = escapeMarkdownLegacy(chatInfo.title || 'Unknown Group');
-                const username = chatInfo.username;
-                groupLink = formatGroupLink(req.chat_id, escapedTitle, username);
-            }
-
-            // Notify Mods
-            const profileLink = `tg://user?id=${user_id}`;
-            const moderatorMessage = MESSAGES.moderator.newRequest(
-                escapeMarkdownLegacy(req.username),
-                escapeMarkdownLegacy(req.display_name),
-                user_id,
-                profileLink,
-                escapeMarkdownLegacy(req.answer_text),
-                escapeMarkdownLegacy(req.chat_id),
-                new Date(req.request_date * 1000).toISOString(),
-                new Date(req.expires_at * 1000).toISOString(),
-                groupLink
-            );
-
-            await sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: moderatorMessage, parse_mode: 'Markdown' }, env);
-            await sendToTelegram('sendMessage', { chat_id: user_id, text: MESSAGES.sentToModerators }, env);
+            await confirmRequest(req, user_id, env, false);
             return;
         } else {
             // Rewrite

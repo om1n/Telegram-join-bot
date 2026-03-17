@@ -1,13 +1,38 @@
 import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
 import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
+import { confirmRequest } from '../services/confirmation.js';
 
 export async function processRemindersAndTimeouts(env) {
     const db = env.DB;
     const now = Math.floor(Date.now() / 1000);
-    const stats = { remindersSent: 0, timeoutsProcessed: 0, errors: [] };
+    const stats = { remindersSent: 0, timeoutsProcessed: 0, autoForwardsProcessed: 0, errors: [] };
 
-    // Daily reminders
+    // 1. Auto-Forward responses > 1 hour old
+    const oneHourAgo = now - 3600;
+    const rowsToForward = await db.prepare(`
+        SELECT * FROM requests 
+        WHERE status = 'answered' 
+        AND answer_date <= ?
+    `).bind(oneHourAgo).all();
+
+    for (const r of rowsToForward.results) {
+        if (env.DEBUG === 'true') {
+            console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
+        } else {
+            console.info(`Auto-forwarding request ${r.id} for user ${r.user_id} (1 hour passed)`);
+        }
+        
+        try {
+            await confirmRequest(r, r.user_id, env, true);
+            stats.autoForwardsProcessed++;
+        } catch (err) {
+            console.error(`Auto-forward error for user ${r.user_id}`, err);
+            stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
+        }
+    }
+
+    // 2. Daily reminders
     const oneDayAgo = now - Math.floor(CONFIG.DAILY_REMINDER_INTERVAL_HOURS * 3600);
     const rowsRemind = await db.prepare(`
     SELECT * FROM requests 

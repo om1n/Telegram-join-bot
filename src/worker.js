@@ -5,6 +5,7 @@ Telegram Join Request Bot — Cloudflare Workers (JavaScript)
 import { handleJoinRequest } from './handlers/join.js';
 import { handleMessage } from './handlers/message.js';
 import { handleChatMember } from './handlers/member.js';
+import { handleCallbackQuery } from './handlers/callback.js';
 import { processRemindersAndTimeouts } from './handlers/cron.js';
 
 export default {
@@ -19,6 +20,8 @@ export default {
         await handleMessage(body.message, env);
       } else if (body.chat_member) {
         await handleChatMember(body.chat_member, env);
+      } else if (body.callback_query) {
+        await handleCallbackQuery(body.callback_query, env);
       }
 
       return new Response('ok');

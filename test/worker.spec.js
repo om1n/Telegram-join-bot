@@ -85,7 +85,7 @@ describe('Telegram Join Request Bot', () => {
         expect(fetch).toHaveBeenCalledWith(
             expect.stringContaining('/sendMessage'),
             expect.objectContaining({
-                body: expect.stringContaining('ежедневные напоминания')
+                body: expect.stringContaining('бот будет напоминать об этом') // Or another key phrase from new copy
             })
         );
     });

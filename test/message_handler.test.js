@@ -127,7 +127,8 @@ describe('handleMessage — no pending request', () => {
         const [, callOptions] = fetch.mock.calls[0];
         const body = JSON.parse(callOptions.body);
         expect(body.text).not.toContain('активной заявки');
-        // No reply_markup (confirmation message doesn't have one)
-        expect(body.reply_markup).toBeUndefined();
+        // Now it SHOULD HAVE reply_markup
+        expect(body.reply_markup).toBeDefined();
+        expect(body.reply_markup.inline_keyboard[0][0].callback_data).toBe('confirm_1');
     });
 });
