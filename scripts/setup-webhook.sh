@@ -10,7 +10,7 @@ if [ -z "$TOKEN" ] || [ -z "$URL" ]; then
 fi
 
 echo "Setting webhook..."
-curl -F "url=$URL" -F "allowed_updates=[\"message\", \"chat_member\", \"chat_join_request\"]" "https://api.telegram.org/bot$TOKEN/setWebhook"
+curl -F "url=$URL" -F "allowed_updates=[\"message\", \"chat_member\", \"chat_join_request\", \"callback_query\"]" "https://api.telegram.org/bot$TOKEN/setWebhook"
 
 echo ""
 echo "Done."

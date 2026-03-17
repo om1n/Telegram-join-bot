@@ -111,11 +111,13 @@ npm run deploy
 ```
 
 **Crucial Step: Set Webhook**
-After deployment, explicitly tell Telegram to route events to your Cloudflare Worker:
+After deployment, explicitly tell Telegram to route events to your Cloudflare Worker. We strictly define `allowed_updates` so Telegram sends everything we need (including button clicks):
 
 ```bash
-curl "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook?url=https://<YOUR_WORKER_URL>"
+curl -F "url=https://<YOUR_WORKER_URL>" -F "allowed_updates=[\"message\", \"chat_member\", \"chat_join_request\", \"callback_query\"]" "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook"
 ```
+
+Alternatively, use the provided helper script: `./scripts/setup-webhook.sh`
 
 ## Admin Commands
 
