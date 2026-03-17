@@ -12,7 +12,7 @@ export async function handleCallbackQuery(callbackQuery, env) {
     await sendToTelegram('answerCallbackQuery', { callback_query_id: callbackQueryId }, env);
 
     if (data && data.startsWith('confirm_')) {
-        const reqId = data.replace('confirm_', '');
+        const reqId = Number(data.replace('confirm_', ''));
 
         // Fetch the request
         const pending = await db.prepare('SELECT * FROM requests WHERE id = ? AND user_id = ?').bind(reqId, user_id).all();

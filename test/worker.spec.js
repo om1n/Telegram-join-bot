@@ -261,6 +261,45 @@ describe('Telegram Join Request Bot', () => {
     });
 
 
+    it('handleCallbackQuery: confirms request and removes button', async () => {
+        const userId = 250;
+        const reqId = 1;
+        // Setup answered request
+        await env.DB.prepare("INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(reqId, '-100', userId, 1000, 2000, 'answered', 'Callback Answer').run();
+
+        const request = new Request('http://localhost', {
+            method: 'POST',
+            body: JSON.stringify({
+                callback_query: {
+                    id: '12345',
+                    from: { id: userId, is_bot: false },
+                    message: {
+                        message_id: 555,
+                        chat: { id: userId, type: 'private' }
+                    },
+                    data: `confirm_${reqId}`
+                }
+            })
+        });
+
+        await worker.fetch(request, env);
+
+        // Check DB update
+        const { results: [updated] } = await env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(reqId).all();
+        expect(updated.status).toBe('confirmed');
+
+        // Check APIs
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/answerCallbackQuery'),
+            expect.objectContaining({ body: expect.stringContaining('"callback_query_id":"12345"') })
+        );
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/editMessageReplyMarkup'),
+            expect.objectContaining({ body: expect.stringContaining('"reply_markup":{"inline_keyboard":[]}') })
+        );
+    });
+
 
     it('scheduled: timeouts expired requests', async () => {
         const now = Math.floor(Date.now() / 1000);
