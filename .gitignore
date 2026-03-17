@@ -169,3 +169,6 @@ wrangler.toml
 
 # macOS
 .DS_Store
+
+# Claude Code
+.claude/
