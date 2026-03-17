@@ -140,7 +140,7 @@ describe('Telegram Join Request Bot', () => {
         expect(fetch).toHaveBeenCalledWith(
             expect.stringContaining('/sendMessage'),
             expect.objectContaining({
-                body: expect.stringContaining('Вы отправили следующий ответ')
+                body: expect.stringContaining('Вы хотите отправить следующий ответ')
             })
         );
     });

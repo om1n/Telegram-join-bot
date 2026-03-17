@@ -23,7 +23,7 @@ const translations = {
         banned: `⛔ Вы были забанены за спам заявками (слишком много попыток подачи и отмены).
 Решение окончательное.`,
 
-        confirmation: (answerText) => `Вы отправили следующий ответ:
+        confirmation: (answerText) => `Вы хотите отправить следующий ответ:
 
 ${answerText}
 
@@ -124,7 +124,7 @@ _Уже подавали заявку? Убедитесь, что пишете �
 
         banned: `⛔ You have been banned for spamming requests.\nDecision is final.`,
 
-        confirmation: (answerText) => `You sent the following answer:\n\n${answerText}\n\nSend this answer to moderators? Click the button below or type *"Yes"* to confirm, or answer the questions again to rewrite.`,
+        confirmation: (answerText) => `Do you want to send the following answer:\n\n${answerText}\n\nSend this answer to moderators? Click the button below or type *"Yes"* to confirm, or answer the questions again to rewrite.`,
 
         confirmButtonText: 'Send answer',
         autoForwardedMessage: '⏳ One hour has passed, so your answer was automatically forwarded to the moderators for review.',
