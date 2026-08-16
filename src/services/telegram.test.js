@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { formatGroupLink } from './telegram.js';
+import { formatGroupLink, fullname } from './telegram.js';
+
+describe('fullname', () => {
+    it('should return only first_name if last_name is missing', () => {
+        expect(fullname({ first_name: 'John' })).toBe('John');
+    });
+
+    it('should return only last_name if first_name is missing', () => {
+        expect(fullname({ last_name: 'Doe' })).toBe('Doe');
+    });
+
+    it('should return both names separated by a space if both are provided', () => {
+        expect(fullname({ first_name: 'John', last_name: 'Doe' })).toBe('John Doe');
+    });
+
+    it('should return an empty string if neither is provided', () => {
+        expect(fullname({})).toBe('');
+    });
+
+    it('should handle falsy values correctly', () => {
+        expect(fullname({ first_name: '', last_name: undefined })).toBe('');
+        expect(fullname({ first_name: null, last_name: false })).toBe('');
+    });
+});
 
 describe('formatGroupLink', () => {
     describe('Happy Paths', () => {
