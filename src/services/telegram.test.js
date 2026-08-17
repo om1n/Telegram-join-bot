@@ -1,5 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { escapeMarkdown, formatGroupLink, fullname } from './telegram.js';
+import { escapeMarkdown, escapeMarkdownLegacy, formatGroupLink, fullname } from './telegram.js';
+
+describe('escapeMarkdownLegacy', () => {
+    it('should return empty string for falsy values', () => {
+        expect(escapeMarkdownLegacy('')).toBe('');
+        expect(escapeMarkdownLegacy(null)).toBe('');
+        expect(escapeMarkdownLegacy(undefined)).toBe('');
+    });
+
+    it('should escape legacy markdown characters', () => {
+        expect(escapeMarkdownLegacy('*bold*')).toBe('\\*bold\\*');
+        expect(escapeMarkdownLegacy('_italic_')).toBe('\\_italic\\_');
+        expect(escapeMarkdownLegacy('`code`')).toBe('\\`code\\`');
+        expect(escapeMarkdownLegacy('[link]')).toBe('\\[link]');
+    });
+
+    it('should not escape characters that are not special in legacy markdown', () => {
+        expect(escapeMarkdownLegacy('()')).toBe('()');
+        expect(escapeMarkdownLegacy('{}')).toBe('{}');
+        expect(escapeMarkdownLegacy('#tag')).toBe('#tag');
+        expect(escapeMarkdownLegacy('+1')).toBe('+1');
+        expect(escapeMarkdownLegacy('-1')).toBe('-1');
+        expect(escapeMarkdownLegacy('test.')).toBe('test.');
+        expect(escapeMarkdownLegacy('test!')).toBe('test!');
+        expect(escapeMarkdownLegacy('~')).toBe('~');
+    });
+
+    it('should not alter text without special characters', () => {
+        expect(escapeMarkdownLegacy('Hello World 123')).toBe('Hello World 123');
+    });
+
+    it('should escape a mix of characters', () => {
+        expect(escapeMarkdownLegacy('Hello *World*! See [Link](http://example.com)')).toBe('Hello \\*World\\*! See \\[Link](http://example.com)');
+    });
+});
 
 describe('escapeMarkdown', () => {
     it('should return empty string for falsy values', () => {
