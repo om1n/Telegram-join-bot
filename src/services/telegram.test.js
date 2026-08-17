@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as telegramModule from './telegram.js';
-import { getChatInfo } from './telegram.js';
-import { escapeMarkdown, escapeMarkdownLegacy, formatGroupLink, fullname } from './telegram.js';
+import { escapeMarkdown, escapeMarkdownLegacy, formatGroupLink, fullname, getChatInfo } from './telegram.js';
 
 describe('escapeMarkdownLegacy', () => {
     it('should return empty string for falsy values', () => {
