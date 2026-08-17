@@ -1,5 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { formatGroupLink, fullname } from './telegram.js';
+import { escapeMarkdown, formatGroupLink, fullname } from './telegram.js';
+
+describe('escapeMarkdown', () => {
+    it('should return empty string for falsy values', () => {
+        expect(escapeMarkdown('')).toBe('');
+        expect(escapeMarkdown(null)).toBe('');
+        expect(escapeMarkdown(undefined)).toBe('');
+    });
+
+    it('should escape basic markdown characters', () => {
+        expect(escapeMarkdown('*bold*')).toBe('\\*bold\\*');
+        expect(escapeMarkdown('_italic_')).toBe('\\_italic\\_');
+        expect(escapeMarkdown('`code`')).toBe('\\`code\\`');
+        expect(escapeMarkdown('[link]')).toBe('\\[link\\]');
+    });
+
+    it('should escape markdown V2 characters', () => {
+        expect(escapeMarkdown('()')).toBe('\\(\\)');
+        expect(escapeMarkdown('{}')).toBe('\\{\\}');
+        expect(escapeMarkdown('#tag')).toBe('\\#tag');
+        expect(escapeMarkdown('+1')).toBe('\\+1');
+        expect(escapeMarkdown('-1')).toBe('\\-1');
+        expect(escapeMarkdown('test.')).toBe('test\\.');
+        expect(escapeMarkdown('test!')).toBe('test\\!');
+        expect(escapeMarkdown('\\')).toBe('\\\\');
+    });
+
+    it('should not alter text without special characters', () => {
+        expect(escapeMarkdown('Hello World 123')).toBe('Hello World 123');
+    });
+
+    it('should escape a mix of characters', () => {
+        expect(escapeMarkdown('Hello *World*! See [Link](http://example.com)')).toBe('Hello \\*World\\*\\! See \\[Link\\]\\(http://example\\.com\\)');
+    });
+});
 
 describe('fullname', () => {
     it('should return only first_name if last_name is missing', () => {
