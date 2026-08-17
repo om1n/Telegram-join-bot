@@ -1,0 +1,108 @@
+<<<<<<< SEARCH
+vi.mock('./telegram.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        sendToTelegram: vi.fn(),
+    };
+});
+
+describe('getChatInfo', () => {
+    const mockEnv = { TELEGRAM_BOT_TOKEN: 'test-token' };
+
+    let consoleErrorSpy;
+
+    beforeEach(() => {
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('should return chat object on success', async () => {
+        telegramModule.sendToTelegram.mockResolvedValue({
+            ok: true,
+            result: { id: '123', title: 'Test Chat' }
+        });
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toEqual({ id: '123', title: 'Test Chat' });
+        expect(telegramModule.sendToTelegram).toHaveBeenCalledWith('getChat', { chat_id: '123' }, mockEnv);
+    });
+
+    it('should return null when API returns ok: false', async () => {
+        const errorPayload = { ok: false, error_code: 400, description: 'Chat not found' };
+        telegramModule.sendToTelegram.mockResolvedValue(errorPayload);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to get chat info:', errorPayload);
+    });
+
+    it('should return null when sendToTelegram throws an error', async () => {
+        const networkError = new Error('Network error');
+        telegramModule.sendToTelegram.mockRejectedValue(networkError);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching chat info:', networkError);
+    });
+});
+=======
+describe('getChatInfo', () => {
+    const mockEnv = { TELEGRAM_BOT_TOKEN: 'test-token' };
+
+    let consoleErrorSpy;
+    let fetchSpy;
+
+    beforeEach(() => {
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetchSpy = vi.spyOn(global, 'fetch');
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should return chat object on success', async () => {
+        fetchSpy.mockResolvedValueOnce({
+            json: async () => ({
+                ok: true,
+                result: { id: '123', title: 'Test Chat' }
+            })
+        });
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toEqual({ id: '123', title: 'Test Chat' });
+        expect(fetchSpy).toHaveBeenCalledWith(
+            'https://api.telegram.org/bottest-token/getChat',
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({ chat_id: '123' })
+            })
+        );
+    });
+
+    it('should return null when API returns ok: false', async () => {
+        const errorPayload = { ok: false, error_code: 400, description: 'Chat not found' };
+        fetchSpy.mockResolvedValueOnce({
+            json: async () => errorPayload
+        });
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to get chat info:', errorPayload);
+    });
+
+    it('should return null when sendToTelegram throws an error', async () => {
+        const networkError = new Error('Network error');
+        fetchSpy.mockRejectedValueOnce(networkError);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching chat info:', networkError);
+    });
+});
+>>>>>>> REPLACE

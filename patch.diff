@@ -1,0 +1,64 @@
+<<<<<<< SEARCH
+import { escapeMarkdown, escapeMarkdownLegacy, formatGroupLink, fullname } from './telegram.js';
+=======
+import { vi } from 'vitest';
+import { getChatInfo } from './telegram.js';
+import * as telegramModule from './telegram.js';
+import { escapeMarkdown, escapeMarkdownLegacy, formatGroupLink, fullname } from './telegram.js';
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        it('should not be affected by the value of chatId', () => {
+            expect(formatGroupLink('some-weird-id', 'Group', 'user')).toBe('[Group](https://t.me/user)');
+            expect(formatGroupLink(-987654, 'Group')).toBe('*Group*');
+        });
+    });
+});
+=======
+        it('should not be affected by the value of chatId', () => {
+            expect(formatGroupLink('some-weird-id', 'Group', 'user')).toBe('[Group](https://t.me/user)');
+            expect(formatGroupLink(-987654, 'Group')).toBe('*Group*');
+        });
+    });
+});
+
+describe('getChatInfo', () => {
+    const mockEnv = { TELEGRAM_BOT_TOKEN: 'test-token' };
+
+    beforeEach(() => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should return chat object on success', async () => {
+        vi.spyOn(telegramModule, 'sendToTelegram').mockResolvedValueOnce({
+            ok: true,
+            result: { id: '123', title: 'Test Chat' }
+        });
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toEqual({ id: '123', title: 'Test Chat' });
+        expect(telegramModule.sendToTelegram).toHaveBeenCalledWith('getChat', { chat_id: '123' }, mockEnv);
+    });
+
+    it('should return null when API returns ok: false', async () => {
+        const errorPayload = { ok: false, error_code: 400, description: 'Chat not found' };
+        vi.spyOn(telegramModule, 'sendToTelegram').mockResolvedValueOnce(errorPayload);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(console.error).toHaveBeenCalledWith('Failed to get chat info:', errorPayload);
+    });
+
+    it('should return null when sendToTelegram throws an error', async () => {
+        const networkError = new Error('Network error');
+        vi.spyOn(telegramModule, 'sendToTelegram').mockRejectedValueOnce(networkError);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(console.error).toHaveBeenCalledWith('Error fetching chat info:', networkError);
+    });
+});
+>>>>>>> REPLACE

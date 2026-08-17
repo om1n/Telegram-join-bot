@@ -1,0 +1,37 @@
+<<<<<<< SEARCH
+    it('should return null when API returns ok: false', async () => {
+        const errorPayload = { ok: false, error_code: 400, description: 'Chat not found' };
+        vi.spyOn(telegramModule, 'sendToTelegram').mockResolvedValueOnce(errorPayload);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(console.error).toHaveBeenCalledWith('Failed to get chat info:', errorPayload);
+    });
+
+    it('should return null when sendToTelegram throws an error', async () => {
+        const networkError = new Error('Network error');
+        vi.spyOn(telegramModule, 'sendToTelegram').mockRejectedValueOnce(networkError);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+        expect(console.error).toHaveBeenCalledWith('Error fetching chat info:', networkError);
+    });
+});
+=======
+    it('should return null when API returns ok: false', async () => {
+        const errorPayload = { ok: false, error_code: 400, description: 'Chat not found' };
+        vi.spyOn(telegramModule, 'sendToTelegram').mockResolvedValueOnce(errorPayload);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+    });
+
+    it('should return null when sendToTelegram throws an error', async () => {
+        const networkError = new Error('Network error');
+        vi.spyOn(telegramModule, 'sendToTelegram').mockRejectedValueOnce(networkError);
+
+        const result = await getChatInfo('123', mockEnv);
+        expect(result).toBeNull();
+    });
+});
+>>>>>>> REPLACE
