@@ -141,6 +141,7 @@ async function handleAdminCommand(text, msg, env) {
         let rejectedCount = 0;
         let failCount = 0;
         let errors = [];
+        let dbStatements = [];
 
         for (const r of rows.results) {
             let res;
@@ -156,9 +157,9 @@ async function handleAdminCommand(text, msg, env) {
             if (!res || !res.ok) {
                 const desc = res ? res.description : 'Unknown';
                 if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                    await db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id).run();
-                    await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                        .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })).run();
+                    dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+                    dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                        .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })));
                     rejectedCount++;
                     continue;
                 }
@@ -168,10 +169,14 @@ async function handleAdminCommand(text, msg, env) {
                 continue;
             }
 
-            await db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id).run();
-            await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })).run();
+            dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+            dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
             rejectedCount++;
+        }
+
+        if (dbStatements.length > 0) {
+            await db.batch(dbStatements);
         }
 
         const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
