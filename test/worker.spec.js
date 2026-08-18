@@ -15,6 +15,7 @@ describe('Telegram Join Request Bot', () => {
         env.MOD_CHAT_ID = '-100999';
         env.ADMIN_USER_ID = '123456';
         env.TELEGRAM_BOT_TOKEN = 'test_token';
+        env.WEBHOOK_SECRET = undefined; // Reset webhook secret
 
         // Apply schema
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS requests (
@@ -50,6 +51,53 @@ describe('Telegram Join Request Bot', () => {
             ok: true
         };
     }
+
+    describe('Webhook Authentication', () => {
+        it('allows request when WEBHOOK_SECRET is not set', async () => {
+            const request = new Request('http://localhost', {
+                method: 'POST',
+                body: JSON.stringify({ message: { text: '/start', chat: { id: 1, type: 'private' }, from: { id: 1 } } })
+            });
+            const response = await worker.fetch(request, env);
+            expect(response.status).toBe(200);
+        });
+
+        it('rejects request when WEBHOOK_SECRET is set but token is missing', async () => {
+            env.WEBHOOK_SECRET = 'super_secret';
+            const request = new Request('http://localhost', {
+                method: 'POST',
+                body: JSON.stringify({ message: { text: '/start', chat: { id: 1, type: 'private' }, from: { id: 1 } } })
+            });
+            const response = await worker.fetch(request, env);
+            expect(response.status).toBe(401);
+        });
+
+        it('rejects request when WEBHOOK_SECRET is set but token is incorrect', async () => {
+            env.WEBHOOK_SECRET = 'super_secret';
+            const request = new Request('http://localhost', {
+                method: 'POST',
+                headers: {
+                    'X-Telegram-Bot-Api-Secret-Token': 'wrong_secret'
+                },
+                body: JSON.stringify({ message: { text: '/start', chat: { id: 1, type: 'private' }, from: { id: 1 } } })
+            });
+            const response = await worker.fetch(request, env);
+            expect(response.status).toBe(401);
+        });
+
+        it('allows request when WEBHOOK_SECRET is set and token is correct', async () => {
+            env.WEBHOOK_SECRET = 'super_secret';
+            const request = new Request('http://localhost', {
+                method: 'POST',
+                headers: {
+                    'X-Telegram-Bot-Api-Secret-Token': 'super_secret'
+                },
+                body: JSON.stringify({ message: { text: '/start', chat: { id: 1, type: 'private' }, from: { id: 1 } } })
+            });
+            const response = await worker.fetch(request, env);
+            expect(response.status).toBe(200);
+        });
+    });
 
     it('handleJoinRequest: saves request and sends questions', async () => {
         const request = new Request('http://localhost', {

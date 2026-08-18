@@ -12,6 +12,16 @@ export default {
   async fetch(request, env) {
     try {
       if (request.method !== 'POST') return new Response('ok');
+
+      // Security: Webhook Authentication
+      if (env.WEBHOOK_SECRET) {
+        const token = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+        if (token !== env.WEBHOOK_SECRET) {
+          console.warn('Unauthorized webhook request: invalid or missing secret token');
+          return new Response('Unauthorized', { status: 401 });
+        }
+      }
+
       const body = await request.json();
 
       if (body.chat_join_request) {
