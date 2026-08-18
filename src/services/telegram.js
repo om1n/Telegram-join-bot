@@ -20,12 +20,6 @@ export function escapeMarkdownLegacy(text) {
     return text.replace(/([*_`[])/g, '\\$1');
 }
 
-// Utility to escape markdown special chars roughly (for API errors etc)
-export function escapeMarkdown(text) {
-    if (!text) return '';
-    return text.replace(/([\\`*_[\]{}()#+\-.!])/g, '\\$1');
-}
-
 export function fullname(from) {
     const parts = [];
     if (from.first_name) parts.push(from.first_name);
