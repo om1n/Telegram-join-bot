@@ -2,6 +2,7 @@ import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
 import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
 import { confirmRequest } from '../services/confirmation.js';
+import { cleanupDuplicates } from '../services/database.js';
 
 export async function processRemindersAndTimeouts(env) {
     const db = env.DB;
@@ -118,17 +119,3 @@ export async function processRemindersAndTimeouts(env) {
     return stats;
 }
 
-// Internal
-async function cleanupDuplicates(db) {
-    await db.prepare(`
-    UPDATE requests 
-    SET status = 'superseded' 
-    WHERE status = 'pending' 
-    AND id NOT IN (
-      SELECT MAX(id) 
-      FROM requests 
-      WHERE status = 'pending' 
-      GROUP BY user_id, chat_id
-    )
-  `).run();
-}

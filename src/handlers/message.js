@@ -2,6 +2,7 @@ import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
 import { sendToTelegram, escapeMarkdownLegacy, getChatInfo, formatGroupLink } from '../services/telegram.js';
 import { processRemindersAndTimeouts } from './cron.js';
+import { cleanupDuplicates } from '../services/database.js';
 import { confirmRequest } from '../services/confirmation.js';
 
 export async function handleMessage(msg, env) {
@@ -180,17 +181,3 @@ async function handleAdminCommand(text, msg, env) {
     await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.unknown }, env);
 }
 
-// Internal dupe cleaner
-async function cleanupDuplicates(db) {
-    await db.prepare(`
-    UPDATE requests 
-    SET status = 'superseded' 
-    WHERE status = 'pending' 
-    AND id NOT IN (
-      SELECT MAX(id) 
-      FROM requests 
-      WHERE status = 'pending' 
-      GROUP BY user_id, chat_id
-    )
-  `).run();
-}
