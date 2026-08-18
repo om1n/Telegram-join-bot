@@ -58,16 +58,22 @@ export async function processRemindersAndTimeouts(env) {
     }
 
     // Timeouts
+    await db.prepare(`
+        UPDATE requests
+        SET status = 'superseded'
+        WHERE expires_at <= ?
+          AND status IN ('pending', 'answered')
+          AND EXISTS (
+              SELECT 1 FROM requests r2
+              WHERE r2.user_id = requests.user_id
+                AND r2.chat_id = requests.chat_id
+                AND r2.status IN ('pending', 'answered')
+                AND r2.id > requests.id
+          )
+    `).bind(now).run();
+
     const rowsExp = await db.prepare('SELECT * FROM requests WHERE expires_at <= ? AND status IN ("pending","answered")').bind(now).all();
     for (const r of rowsExp.results) {
-        const newer = await db.prepare('SELECT id FROM requests WHERE user_id = ? AND chat_id = ? AND status IN ("pending", "answered") AND id > ?')
-            .bind(r.user_id, r.chat_id, r.id).all();
-
-        if (newer.results && newer.results.length > 0) {
-            await db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('superseded', r.id).run();
-            continue;
-        }
-
         let rejectRes;
         try {
             rejectRes = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
