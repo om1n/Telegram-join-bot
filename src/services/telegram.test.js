@@ -12,7 +12,8 @@ describe('escapeMarkdownLegacy', () => {
         expect(escapeMarkdownLegacy('*bold*')).toBe('\\*bold\\*');
         expect(escapeMarkdownLegacy('_italic_')).toBe('\\_italic\\_');
         expect(escapeMarkdownLegacy('`code`')).toBe('\\`code\\`');
-        expect(escapeMarkdownLegacy('[link]')).toBe('\\[link]');
+        expect(escapeMarkdownLegacy('[link]')).toBe('\\[link\\]');
+        expect(escapeMarkdownLegacy('\\')).toBe('\\\\');
     });
 
     it('should not escape characters that are not special in legacy markdown', () => {
@@ -31,7 +32,7 @@ describe('escapeMarkdownLegacy', () => {
     });
 
     it('should escape a mix of characters', () => {
-        expect(escapeMarkdownLegacy('Hello *World*! See [Link](http://example.com)')).toBe('Hello \\*World\\*! See \\[Link](http://example.com)');
+        expect(escapeMarkdownLegacy('Hello *World*! See [Link](http://example.com)')).toBe('Hello \\*World\\*! See \\[Link\\](http://example.com)');
     });
 });
 

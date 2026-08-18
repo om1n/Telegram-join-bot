@@ -5,14 +5,14 @@ import { MESSAGES } from '../src/messages.js';
 // Replica of the function in worker.js
 function escapeMarkdownLegacy(text) {
     if (!text) return '';
-    return text.replace(/([*_`[])/g, '\\$1');
+    return text.replace(/([*_`\[\]\\])/g, '\\$1');
 }
 
 describe('Markdown Escaping', () => {
     it('escapes special characters correctly', () => {
-        const dangerous = 'Hello *world* [link] _italic_ `code`';
+        const dangerous = 'Hello *world* [link] _italic_ `code` \\';
         const escaped = escapeMarkdownLegacy(dangerous);
-        expect(escaped).toBe('Hello \\*world\\* \\[link] \\_italic\\_ \\`code\\`');
+        expect(escaped).toBe('Hello \\*world\\* \\[link\\] \\_italic\\_ \\`code\\` \\\\');
     });
 
     it('escapes names in welcome message', () => {
@@ -37,6 +37,6 @@ describe('Markdown Escaping', () => {
 
         expect(msg).toContain('user\\_name');
         expect(msg).toContain('Display\\*Name');
-        expect(msg).toContain('I am a \\*hacker\\* \\[link]');
+        expect(msg).toContain('I am a \\*hacker\\* \\[link\\]');
     });
 });

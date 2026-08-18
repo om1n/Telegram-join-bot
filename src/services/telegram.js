@@ -17,7 +17,7 @@ export async function sendToTelegram(method, body, env) {
 // Special chars are: * _ ` [ ]
 export function escapeMarkdownLegacy(text) {
     if (!text) return '';
-    return text.replace(/([*_`[])/g, '\\$1');
+    return text.replace(/([*_`\[\]\\])/g, '\\$1');
 }
 
 export function fullname(from) {
