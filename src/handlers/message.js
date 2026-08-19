@@ -143,36 +143,41 @@ async function handleAdminCommand(text, msg, env) {
         let errors = [];
         let dbStatements = [];
 
-        for (const r of rows.results) {
-            let res;
+        const rejectPromises = rows.results.map(async (r) => {
             try {
-                res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
+                const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
+                if (!res || !res.ok) {
+                    const desc = res ? res.description : 'Unknown';
+                    if (desc.includes('HIDE_REQUESTER_MISSING')) {
+                        return { success: true, missing: true, r };
+                    }
+                    return { success: false, error: `API Error: ${desc}` };
+                }
+                return { success: true, missing: false, r };
             } catch (err) {
                 console.error('Manual reject error', err);
-                failCount++;
-                errors.push(`Pending status kept. Net error: ${err.message}`);
-                continue;
+                return { success: false, error: `Pending status kept. Net error: ${err.message}` };
             }
+        });
 
-            if (!res || !res.ok) {
-                const desc = res ? res.description : 'Unknown';
-                if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                    dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+        const results = await Promise.all(rejectPromises);
+
+        for (const result of results) {
+            if (!result.success) {
+                failCount++;
+                errors.push(result.error);
+            } else {
+                const { missing, r } = result;
+                dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+                if (missing) {
                     dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
                         .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })));
-                    rejectedCount++;
-                    continue;
+                } else {
+                    dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                        .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
                 }
-
-                failCount++;
-                errors.push(`API Error: ${desc}`);
-                continue;
+                rejectedCount++;
             }
-
-            dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
-            dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
-            rejectedCount++;
         }
 
         if (dbStatements.length > 0) {
