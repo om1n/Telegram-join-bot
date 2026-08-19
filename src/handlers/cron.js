@@ -35,6 +35,8 @@ export async function processRemindersAndTimeouts(env) {
 
     await Promise.all(forwardPromises);
 
+    const dbStatements = [];
+
     // 2. Daily reminders
     const oneDayAgo = now - Math.floor(CONFIG.DAILY_REMINDER_INTERVAL_HOURS * 3600);
     const rowsRemind = await db.prepare(`
@@ -52,9 +54,13 @@ export async function processRemindersAndTimeouts(env) {
 
         await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.dailyReminder(daysLeft) }, env);
 
-        await db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?').bind(now, r.id).run();
-        await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-            .bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft })).run();
+        dbStatements.push(
+            db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?').bind(now, r.id)
+        );
+        dbStatements.push(
+            db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                .bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft }))
+        );
 
         stats.remindersSent++;
     }
@@ -90,18 +96,26 @@ export async function processRemindersAndTimeouts(env) {
             console.error(`reject error (api) for user ${r.user_id}:`, desc);
 
             if (desc.includes('USER_ID_INVALID') || desc.includes('user is deactivated')) {
-                await db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('user_missing_or_banned', r.id).run();
-                await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc })).run();
+                dbStatements.push(
+                    db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('user_missing_or_banned', r.id)
+                );
+                dbStatements.push(
+                    db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                        .bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc }))
+                );
                 stats.timeoutsProcessed++;
                 stats.errors.push(`User ${r.user_id} invalid (USER_ID_INVALID/deactivated), marked 'user_missing_or_banned'.`);
                 continue;
             }
 
             if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                await db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('request_no_longer_valid', r.id).run();
-                await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc })).run();
+                dbStatements.push(
+                    db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('request_no_longer_valid', r.id)
+                );
+                dbStatements.push(
+                    db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                        .bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc }))
+                );
                 stats.timeoutsProcessed++;
                 stats.errors.push(`User ${r.user_id} missing request (HIDE_REQUESTER_MISSING), marked 'request_no_longer_valid'.`);
                 continue;
@@ -111,15 +125,23 @@ export async function processRemindersAndTimeouts(env) {
             continue;
         }
 
-        await db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('timed_out', r.id).run();
-        await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-            .bind(r.id, r.user_id, 'auto_rejected', now, JSON.stringify({ reason: 'timeout' })).run();
+        dbStatements.push(
+            db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('timed_out', r.id)
+        );
+        dbStatements.push(
+            db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                .bind(r.id, r.user_id, 'auto_rejected', now, JSON.stringify({ reason: 'timeout' }))
+        );
         stats.timeoutsProcessed++;
 
         await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.timeoutUser }, env);
 
         const modMsg = MESSAGES.moderator.autoReject(r.id, escapeMarkdownLegacy(r.username), escapeMarkdownLegacy(r.display_name), r.user_id);
         await sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: modMsg, parse_mode: 'Markdown' }, env);
+    }
+
+    if (dbStatements.length > 0) {
+        await db.batch(dbStatements);
     }
 
     // Cleanup duplicates from cron as well
