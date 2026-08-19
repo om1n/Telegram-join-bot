@@ -17,7 +17,7 @@ export async function processRemindersAndTimeouts(env) {
         AND answer_date <= ?
     `).bind(oneHourAgo).all();
 
-    for (const r of rowsToForward.results) {
+    const forwardPromises = rowsToForward.results.map(async (r) => {
         if (env.DEBUG === 'true') {
             console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
         } else {
@@ -31,7 +31,9 @@ export async function processRemindersAndTimeouts(env) {
             console.error(`Auto-forward error for user ${r.user_id}`, err);
             stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
         }
-    }
+    });
+
+    await Promise.all(forwardPromises);
 
     // 2. Daily reminders
     const oneDayAgo = now - Math.floor(CONFIG.DAILY_REMINDER_INTERVAL_HOURS * 3600);
