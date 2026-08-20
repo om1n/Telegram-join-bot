@@ -5,12 +5,14 @@ export async function handleChatMember(cm, env) {
     const newStatus = cm.new_chat_member?.status;
 
     // DEBUG event
-    try {
-        const db = env.DB;
-        await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-            .bind(0, cm.from.id, 'debug_chat_member', Math.floor(Date.now() / 1000), JSON.stringify(cm)).run();
-    } catch (e) {
-        console.error('Debug log error', e);
+    if (env.DEBUG === 'true') {
+        try {
+            const db = env.DB;
+            await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                .bind(0, cm.from.id, 'debug_chat_member', Math.floor(Date.now() / 1000), JSON.stringify(cm)).run();
+        } catch (e) {
+            console.error('Debug log error', e);
+        }
     }
 
     if (newStatus !== 'member') return;

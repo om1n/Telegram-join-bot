@@ -39,7 +39,8 @@ describe('handleChatMember', () => {
 
         mockEnv = {
             DB: mockDb,
-            MOD_CHAT_ID: 'mod-123'
+            MOD_CHAT_ID: 'mod-123',
+            DEBUG: 'true'
         };
 
         baseChatMember = {
@@ -65,6 +66,12 @@ describe('handleChatMember', () => {
                 }
             }
         };
+    });
+
+    it('should not log debug event if env.DEBUG is not true', async () => {
+        mockEnv.DEBUG = 'false';
+        await handleChatMember(baseChatMember, mockEnv);
+        expect(executedQueries.length).toBe(0);
     });
 
     it('should log debug event and process new member', async () => {
