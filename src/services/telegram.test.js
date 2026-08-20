@@ -178,4 +178,44 @@ describe('getChatInfo', () => {
         expect(result).toBeNull();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching chat info:', networkError);
     });
+
+    it('should return cached chat info without making additional network calls within TTL', async () => {
+        fetchSpy.mockResolvedValueOnce({
+            json: async () => ({
+                ok: true,
+                result: { id: '123', title: 'Test Chat' }
+            })
+        });
+
+        const first = await getChatInfo('123', mockEnv);
+        const second = await getChatInfo('123', mockEnv);
+
+        expect(first).toEqual({ id: '123', title: 'Test Chat' });
+        expect(second).toEqual({ id: '123', title: 'Test Chat' });
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should refetch chat info after cache TTL expires', async () => {
+        fetchSpy.mockResolvedValue({
+            json: async () => ({
+                ok: true,
+                result: { id: '123', title: 'Test Chat' }
+            })
+        });
+
+        const dateNowSpy = vi.spyOn(Date, 'now');
+        dateNowSpy.mockReturnValue(1000000);
+
+        await getChatInfo('123', mockEnv);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+        // Advance time past 5 minutes (300,000 ms)
+        dateNowSpy.mockReturnValue(1000000 + 300001);
+
+        await getChatInfo('123', mockEnv);
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+        dateNowSpy.mockRestore();
+    });
 });
+
