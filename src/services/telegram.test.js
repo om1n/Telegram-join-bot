@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { escapeMarkdownLegacy, formatGroupLink, fullname, getChatInfo } from './telegram.js';
+import { escapeMarkdownLegacy, formatGroupLink, fullname, getChatInfo, __resetChatInfoCache } from './telegram.js';
 
 describe('escapeMarkdownLegacy', () => {
     it('should return empty string for falsy values', () => {
@@ -133,6 +133,7 @@ describe('getChatInfo', () => {
     beforeEach(() => {
         consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         fetchSpy = vi.spyOn(global, 'fetch');
+        __resetChatInfoCache();
     });
 
     afterEach(() => {

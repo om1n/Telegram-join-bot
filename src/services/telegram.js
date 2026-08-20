@@ -33,10 +33,25 @@ export function fullname(from) {
  * @param {object} env - Environment variables with TELEGRAM_BOT_TOKEN
  * @returns {Promise<object|null>} Chat object or null on error
  */
+const chatInfoCache = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export function __resetChatInfoCache() {
+    chatInfoCache.clear();
+}
+
 export async function getChatInfo(chatId, env) {
+    const now = Date.now();
+    const cached = chatInfoCache.get(chatId);
+
+    if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+        return cached.data;
+    }
+
     try {
         const result = await sendToTelegram('getChat', { chat_id: chatId }, env);
         if (result.ok) {
+            chatInfoCache.set(chatId, { data: result.result, timestamp: now });
             return result.result;
         }
         console.error('Failed to get chat info:', result);
