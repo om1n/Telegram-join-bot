@@ -1,6 +1,6 @@
 import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
-import { sendToTelegram, escapeMarkdownLegacy, getChatInfo, formatGroupLink } from '../services/telegram.js';
+import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
 import { processRemindersAndTimeouts } from './cron.js';
 import { cleanupDuplicates } from '../services/database.js';
 import { confirmRequest } from '../services/confirmation.js';
