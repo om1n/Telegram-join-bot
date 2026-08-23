@@ -4,12 +4,11 @@ import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
 import { confirmRequest } from '../services/confirmation.js';
 import { cleanupDuplicates } from '../services/database.js';
 
-export async function processRemindersAndTimeouts(env) {
-    const db = env.DB;
-    const now = Math.floor(Date.now() / 1000);
-    const stats = { remindersSent: 0, timeoutsProcessed: 0, autoForwardsProcessed: 0, errors: [] };
+const BATCH_SIZE = 10;
 
-    // 1. Auto-Forward responses > 1 hour old
+export async function processAutoForwards(env, now) {
+    const db = env.DB;
+    const stats = { autoForwardsProcessed: 0, errors: [] };
     const oneHourAgo = now - 3600;
     const rowsToForward = await db.prepare(`
         SELECT * FROM requests 
@@ -17,7 +16,6 @@ export async function processRemindersAndTimeouts(env) {
         AND answer_date <= ?
     `).bind(oneHourAgo).all();
 
-    const BATCH_SIZE = 10;
     for (let i = 0; i < rowsToForward.results.length; i += BATCH_SIZE) {
         const batch = rowsToForward.results.slice(i, i + BATCH_SIZE);
         const forwardPromises = batch.map(async (r) => {
@@ -38,10 +36,13 @@ export async function processRemindersAndTimeouts(env) {
 
         await Promise.all(forwardPromises);
     }
+    return stats;
+}
 
+export async function processDailyReminders(env, now) {
+    const db = env.DB;
+    const stats = { remindersSent: 0, errors: [] };
     const dbStatements = [];
-
-    // 2. Daily reminders
     const oneDayAgo = now - Math.floor(CONFIG.DAILY_REMINDER_INTERVAL_HOURS * 3600);
     const rowsRemind = await db.prepare(`
     SELECT * FROM requests 
@@ -74,7 +75,17 @@ export async function processRemindersAndTimeouts(env) {
         await Promise.all(reminderPromises);
     }
 
-    // Timeouts
+    if (dbStatements.length > 0) {
+        await db.batch(dbStatements);
+    }
+    return stats;
+}
+
+export async function processTimeouts(env, now) {
+    const db = env.DB;
+    const stats = { timeoutsProcessed: 0, errors: [] };
+    const dbStatements = [];
+
     await db.prepare(`
         UPDATE requests
         SET status = 'superseded'
@@ -157,9 +168,29 @@ export async function processRemindersAndTimeouts(env) {
     if (dbStatements.length > 0) {
         await db.batch(dbStatements);
     }
+    return stats;
+}
+
+export async function processRemindersAndTimeouts(env) {
+    const db = env.DB;
+    const now = Math.floor(Date.now() / 1000);
+
+    const autoForwardsStats = await processAutoForwards(env, now);
+    const remindersStats = await processDailyReminders(env, now);
+    const timeoutsStats = await processTimeouts(env, now);
+
+    const stats = {
+        remindersSent: remindersStats.remindersSent,
+        timeoutsProcessed: timeoutsStats.timeoutsProcessed,
+        autoForwardsProcessed: autoForwardsStats.autoForwardsProcessed,
+        errors: [
+            ...autoForwardsStats.errors,
+            ...remindersStats.errors,
+            ...timeoutsStats.errors
+        ]
+    };
 
     // Cleanup duplicates from cron as well
     await cleanupDuplicates(db);
     return stats;
 }
-
