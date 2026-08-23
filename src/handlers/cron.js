@@ -50,23 +50,28 @@ export async function processRemindersAndTimeouts(env) {
     AND (last_reminder_ts IS NULL OR last_reminder_ts <= ?)
   `).bind(oneDayAgo, oneDayAgo).all();
 
-    for (const r of rowsRemind.results) {
-        const secondsLeft = r.expires_at - now;
-        const daysLeft = Math.ceil(secondsLeft / (24 * 3600));
+    for (let i = 0; i < rowsRemind.results.length; i += BATCH_SIZE) {
+        const batch = rowsRemind.results.slice(i, i + BATCH_SIZE);
+        const reminderPromises = batch.map(async (r) => {
+            const secondsLeft = r.expires_at - now;
+            const daysLeft = Math.ceil(secondsLeft / (24 * 3600));
 
-        if (daysLeft <= 0) continue;
+            if (daysLeft <= 0) return;
 
-        await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.dailyReminder(daysLeft) }, env);
+            await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.dailyReminder(daysLeft) }, env);
 
-        dbStatements.push(
-            db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?').bind(now, r.id)
-        );
-        dbStatements.push(
-            db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                .bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft }))
-        );
+            dbStatements.push(
+                db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?').bind(now, r.id)
+            );
+            dbStatements.push(
+                db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                    .bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft }))
+            );
 
-        stats.remindersSent++;
+            stats.remindersSent++;
+        });
+
+        await Promise.all(reminderPromises);
     }
 
     // Timeouts

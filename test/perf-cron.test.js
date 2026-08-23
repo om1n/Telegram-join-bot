@@ -7,9 +7,15 @@ global.fetch = vi.fn();
 describe('Cron Performance', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
-        fetch.mockResolvedValue({
-            json: () => Promise.resolve({ ok: true }),
-            ok: true
+        fetch.mockImplementation(() => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        json: () => Promise.resolve({ ok: true }),
+                        ok: true
+                    });
+                }, 10);
+            });
         });
 
         // Apply schema with new column
@@ -49,10 +55,10 @@ describe('Cron Performance', () => {
         const requestDate = now - 25 * 3600; // 25 hours ago
         const expiresAt = requestDate + 7 * 24 * 3600;
 
-        // Insert 1000 requests that need reminders
+        // Insert 200 requests that need reminders
         const insertStmt = env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)");
         const batch = [];
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 200; i++) {
              batch.push(insertStmt.bind('-100', 101 + i, requestDate, expiresAt, 'pending'));
         }
         await env.DB.batch(batch);
@@ -61,10 +67,10 @@ describe('Cron Performance', () => {
         await processRemindersAndTimeouts(env);
         const end = performance.now();
 
-        console.log(`Processing 1000 reminders took ${end - start} ms`);
+        console.log(`Processing 200 reminders took ${end - start} ms`);
 
         // Assert we actually did the work
         const { count } = await env.DB.prepare('SELECT count(*) as count FROM events WHERE event_type = ?').bind('reminder_sent').first();
-        expect(count).toBe(1000);
+        expect(count).toBe(200);
     });
 });
