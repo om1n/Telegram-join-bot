@@ -126,73 +126,78 @@ async function handleAdminCommand(text, msg, env) {
         return;
     }
     if (text.startsWith('/reject ')) {
-        const targetUserId = text.split(' ')[1];
-        if (!targetUserId) {
-            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.rejectUsage }, env);
-            return;
-        }
-
-        const rows = await db.prepare("SELECT * FROM requests WHERE user_id = ? AND status IN ('pending', 'answered')").bind(targetUserId).all();
-        if (!rows.results || rows.results.length === 0) {
-            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.rejectNotFound(targetUserId) }, env);
-            return;
-        }
-
-        let rejectedCount = 0;
-        let failCount = 0;
-        let errors = [];
-        let dbStatements = [];
-
-        const results = [];
-        const BATCH_SIZE = 10;
-        for (let i = 0; i < rows.results.length; i += BATCH_SIZE) {
-            const batch = rows.results.slice(i, i + BATCH_SIZE);
-            const batchPromises = batch.map(async (r) => {
-                try {
-                    const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
-                    if (!res || !res.ok) {
-                        const desc = res ? res.description : 'Unknown';
-                        if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                            return { success: true, missing: true, r };
-                        }
-                        return { success: false, error: `API Error: ${desc}` };
-                    }
-                    return { success: true, missing: false, r };
-                } catch (err) {
-                    console.error('Manual reject error', err);
-                    return { success: false, error: `Pending status kept. Net error: ${err.message}` };
-                }
-            });
-            const batchResults = await Promise.all(batchPromises);
-            results.push(...batchResults);
-        }
-
-        for (const result of results) {
-            if (!result.success) {
-                failCount++;
-                errors.push(result.error);
-            } else {
-                const { missing, r } = result;
-                dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
-                if (missing) {
-                    dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                        .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })));
-                } else {
-                    dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                        .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
-                }
-                rejectedCount++;
-            }
-        }
-
-        if (dbStatements.length > 0) {
-            await db.batch(dbStatements);
-        }
-
-        const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
-        await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
+        await handleRejectCommand(text, chat_id, env);
         return;
     }
     await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.unknown }, env);
+}
+
+async function handleRejectCommand(text, chat_id, env) {
+    const db = env.DB;
+    const targetUserId = text.split(' ')[1];
+    if (!targetUserId) {
+        await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.rejectUsage }, env);
+        return;
+    }
+
+    const rows = await db.prepare("SELECT * FROM requests WHERE user_id = ? AND status IN ('pending', 'answered')").bind(targetUserId).all();
+    if (!rows.results || rows.results.length === 0) {
+        await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.rejectNotFound(targetUserId) }, env);
+        return;
+    }
+
+    let rejectedCount = 0;
+    let failCount = 0;
+    let errors = [];
+    let dbStatements = [];
+
+    const results = [];
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < rows.results.length; i += BATCH_SIZE) {
+        const batch = rows.results.slice(i, i + BATCH_SIZE);
+        const batchPromises = batch.map(async (r) => {
+            try {
+                const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
+                if (!res || !res.ok) {
+                    const desc = res ? res.description : 'Unknown';
+                    if (desc.includes('HIDE_REQUESTER_MISSING')) {
+                        return { success: true, missing: true, r };
+                    }
+                    return { success: false, error: `API Error: ${desc}` };
+                }
+                return { success: true, missing: false, r };
+            } catch (err) {
+                console.error('Manual reject error', err);
+                return { success: false, error: `Pending status kept. Net error: ${err.message}` };
+            }
+        });
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+    }
+
+    for (const result of results) {
+        if (!result.success) {
+            failCount++;
+            errors.push(result.error);
+        } else {
+            const { missing, r } = result;
+            dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+            if (missing) {
+                dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                    .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })));
+            } else {
+                dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+                    .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
+            }
+            rejectedCount++;
+        }
+    }
+
+    if (dbStatements.length > 0) {
+        await db.batch(dbStatements);
+    }
+
+    const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
+    await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
 }
 
