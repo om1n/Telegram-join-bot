@@ -143,24 +143,29 @@ async function handleAdminCommand(text, msg, env) {
         let errors = [];
         let dbStatements = [];
 
-        const rejectPromises = rows.results.map(async (r) => {
-            try {
-                const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
-                if (!res || !res.ok) {
-                    const desc = res ? res.description : 'Unknown';
-                    if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                        return { success: true, missing: true, r };
+        const results = [];
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < rows.results.length; i += BATCH_SIZE) {
+            const batch = rows.results.slice(i, i + BATCH_SIZE);
+            const batchPromises = batch.map(async (r) => {
+                try {
+                    const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
+                    if (!res || !res.ok) {
+                        const desc = res ? res.description : 'Unknown';
+                        if (desc.includes('HIDE_REQUESTER_MISSING')) {
+                            return { success: true, missing: true, r };
+                        }
+                        return { success: false, error: `API Error: ${desc}` };
                     }
-                    return { success: false, error: `API Error: ${desc}` };
+                    return { success: true, missing: false, r };
+                } catch (err) {
+                    console.error('Manual reject error', err);
+                    return { success: false, error: `Pending status kept. Net error: ${err.message}` };
                 }
-                return { success: true, missing: false, r };
-            } catch (err) {
-                console.error('Manual reject error', err);
-                return { success: false, error: `Pending status kept. Net error: ${err.message}` };
-            }
-        });
-
-        const results = await Promise.all(rejectPromises);
+            });
+            const batchResults = await Promise.all(batchPromises);
+            results.push(...batchResults);
+        }
 
         for (const result of results) {
             if (!result.success) {
