@@ -17,23 +17,27 @@ export async function processRemindersAndTimeouts(env) {
         AND answer_date <= ?
     `).bind(oneHourAgo).all();
 
-    const forwardPromises = rowsToForward.results.map(async (r) => {
-        if (env.DEBUG === 'true') {
-            console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
-        } else {
-            console.info(`Auto-forwarding request ${r.id} for user ${r.user_id} (1 hour passed)`);
-        }
-        
-        try {
-            await confirmRequest(r, r.user_id, env, true);
-            stats.autoForwardsProcessed++;
-        } catch (err) {
-            console.error(`Auto-forward error for user ${r.user_id}`, err);
-            stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
-        }
-    });
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < rowsToForward.results.length; i += BATCH_SIZE) {
+        const batch = rowsToForward.results.slice(i, i + BATCH_SIZE);
+        const forwardPromises = batch.map(async (r) => {
+            if (env.DEBUG === 'true') {
+                console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
+            } else {
+                console.info(`Auto-forwarding request ${r.id} for user ${r.user_id} (1 hour passed)`);
+            }
 
-    await Promise.all(forwardPromises);
+            try {
+                await confirmRequest(r, r.user_id, env, true);
+                stats.autoForwardsProcessed++;
+            } catch (err) {
+                console.error(`Auto-forward error for user ${r.user_id}`, err);
+                stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
+            }
+        });
+
+        await Promise.all(forwardPromises);
+    }
 
     const dbStatements = [];
 
