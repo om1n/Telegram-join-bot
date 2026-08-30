@@ -5,14 +5,19 @@ const toRuOrdinal = (n) => ruOrdinals[n] || `${n}-й`;
 
 const translations = {
     ru: {
-        questions: (chatTitle) => [
-            `Здравствуйте! Спасибо за заявку на вступление в группу *${chatTitle || 'группа'}*, крупнейшее сообщество русскоязычных продуктовых специалистов и руководителей в финтехе.`,
-            `Пожалуйста, ответьте одним сообщением на три вопроса (в одном сообщении):`,
-            `1) Чем вы занимаетесь?\n2) Как вы связаны с финтехом?\n3) Откуда узнали о финтех-кружке?`,
-            `Кроме того, подтвердите, что не будете присылать рекламные сообщения или вакансии (напишите об этом в ответе).`,
-            `После отправки ответа бот спросит, отправлять ли ваш ответ модераторам — нажмите кнопку под сообщением или напишите *"Да"* чтобы передать.`,
-            `Пожалуйста, ответьте в течение недели (бот будет напоминать об этом), иначе ваша заявка будет отклонена.`
-        ].join('\n\n'),
+        questions: (chatTitle) => `Здравствуйте! Спасибо за заявку на вступление в группу *${chatTitle || 'группа'}*, крупнейшее сообщество русскоязычных продуктовых специалистов и руководителей в финтехе.
+
+Пожалуйста, ответьте одним сообщением на три вопроса (в одном сообщении):
+
+1) Чем вы занимаетесь?
+2) Как вы связаны с финтехом?
+3) Откуда узнали о финтех-кружке?
+
+Кроме того, подтвердите, что не будете присылать рекламные сообщения или вакансии (напишите об этом в ответе).
+
+После отправки ответа бот спросит, отправлять ли ваш ответ модераторам — нажмите кнопку под сообщением или напишите *"Да"* чтобы передать.
+
+Пожалуйста, ответьте в течение недели (бот будет напоминать об этом), иначе ваша заявка будет отклонена.`,
 
         spamWarning: (attempt) => `⚠️ Я вижу подозрительное поведение (повторная подача заявки: ${toRuOrdinal(attempt)} раз).
 Если вы продолжите спамить заявками, вы будете забанены навсегда.
@@ -26,7 +31,7 @@ const translations = {
 ${answerText}
 
 Отправлять этот ответ модераторам? Нажмите кнопку ниже или напишите *"Да"*, и я передам, либо ответьте на вопросы ещё раз.`,
-        
+
         confirmButtonText: 'Отправить ответ',
         autoForwardedMessage: '⏳ Прошел час, поэтому ваш ответ был автоматически передан модераторам на рассмотрение.',
 
@@ -116,14 +121,7 @@ _Уже подавали заявку? Убедитесь, что пишете �
     },
 
     en: {
-        questions: (chatTitle) => [
-            `Hello! Thank you for your request to join *${chatTitle || 'our group'}*.`,
-            `Please answer these three questions in a single message:`,
-            `1) What do you do?\n2) How are you connected to this topic?\n3) How did you hear about us?`,
-            `Also, please confirm that you will not send spam or job ads.`,
-            `After you reply, the bot will ask needed confirmation — click the button below the message or type *"Yes"* (or *"Да"*) to send it to moderators.`,
-            `You have 7 days to complete this, otherwise the request will be rejected. You will receive daily reminders.`
-        ].join('\n\n'),
+        questions: (chatTitle) => `Hello! Thank you for your request to join *${chatTitle || 'our group'}*.\n\nPlease answer these three questions in a single message:\n\n1) What do you do?\n2) How are you connected to this topic?\n3) How did you hear about us?\n\nAlso, please confirm that you will not send spam or job ads.\n\nAfter you reply, the bot will ask needed confirmation — click the button below the message or type *"Yes"* (or *"Да"*) to send it to moderators.\n\nYou have 7 days to complete this, otherwise the request will be rejected. You will receive daily reminders.`,
 
         spamWarning: (attempt) => `⚠️ Suspicious behavior detected (attempt #${attempt}).\nIf you continue to spam requests, you will be banned permanently.\nPlease answer the questions and wait not for the decision.`,
 
