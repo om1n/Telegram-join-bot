@@ -43,7 +43,7 @@ describe('handleJoinRequest', () => {
                     all: vi.fn(async () => {
                         executedQueries.push({ ...queryObj, type: 'all' });
                         // Return specific results based on query if needed
-                        if (query.includes('SELECT last_insert_rowid()')) {
+                        if (query.includes('INSERT INTO requests') && query.includes('RETURNING id')) {
                             return { results: [{ id: 999 }] };
                         }
                         if (query.includes('SELECT COUNT(*)')) {

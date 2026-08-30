@@ -48,10 +48,9 @@ export async function handleJoinRequest(jr, env) {
         .bind('superseded', user_id, chat_id, 'pending').run();
 
     // Insert request
-    const insertSQL = `INSERT INTO requests (chat_id,user_id,username,display_name,request_date,expires_at,status) VALUES (?,?,?,?,?,?,?)`;
-    await db.prepare(insertSQL).bind(chat_id, user_id, username, display_name, now, expires_at, 'pending').run();
-    const requestRow = await db.prepare('SELECT last_insert_rowid() as id').all();
-    const reqId = requestRow.results && requestRow.results[0] && requestRow.results[0].id ? requestRow.results[0].id : null;
+    const insertSQL = `INSERT INTO requests (chat_id,user_id,username,display_name,request_date,expires_at,status) VALUES (?,?,?,?,?,?,?) RETURNING id`;
+    const insertResult = await db.prepare(insertSQL).bind(chat_id, user_id, username, display_name, now, expires_at, 'pending').all();
+    const reqId = insertResult.results && insertResult.results[0] && insertResult.results[0].id ? insertResult.results[0].id : null;
 
     // Log event
     await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
