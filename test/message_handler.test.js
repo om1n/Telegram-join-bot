@@ -2,6 +2,16 @@ import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import worker from '../src/worker';
 
+function createAuthRequest(url, options = {}) {
+    return new Request(url, {
+        ...options,
+        headers: {
+            'X-Telegram-Bot-Api-Secret-Token': env.WEBHOOK_SECRET || 'test_secret',
+            ...(options.headers || {})
+        }
+    });
+}
+
 // Mock fetch for all Telegram API calls
 global.fetch = vi.fn();
 
@@ -18,6 +28,7 @@ describe('handleMessage — no pending request', () => {
         env.MOD_CHAT_ID = '-100999';
         env.ADMIN_USER_ID = '999999';
         env.TELEGRAM_BOT_TOKEN = 'test_token';
+        env.WEBHOOK_SECRET = 'test_secret';
 
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +71,7 @@ describe('handleMessage — no pending request', () => {
             },
         };
 
-        const request = new Request('https://example.com/', {
+        const request = createAuthRequest('https://example.com/', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(update),
@@ -113,7 +124,7 @@ describe('handleMessage — no pending request', () => {
             },
         };
 
-        const request = new Request('https://example.com/', {
+        const request = createAuthRequest('https://example.com/', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(update),

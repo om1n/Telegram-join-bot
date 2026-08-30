@@ -3,6 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import worker from '../src/worker';
 import { MESSAGES } from '../src/messages';
 
+function createAuthRequest(url, options = {}) {
+    return new Request(url, {
+        ...options,
+        headers: {
+            'X-Telegram-Bot-Api-Secret-Token': env.WEBHOOK_SECRET || 'test_secret',
+            ...(options.headers || {})
+        }
+    });
+}
+
 // Mock fetch for Telegram API calls
 global.fetch = vi.fn();
 
@@ -15,7 +25,7 @@ describe('Telegram Join Request Bot', () => {
         env.MOD_CHAT_ID = '-100999';
         env.ADMIN_USER_ID = '123456';
         env.TELEGRAM_BOT_TOKEN = 'test_token';
-        env.WEBHOOK_SECRET = undefined; // Reset webhook secret
+        env.WEBHOOK_SECRET = 'test_secret';
 
         // Apply schema
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS requests (
@@ -53,16 +63,17 @@ describe('Telegram Join Request Bot', () => {
     }
 
     describe('Webhook Authentication', () => {
-        it('allows request when WEBHOOK_SECRET is not set', async () => {
+        it('rejects request when WEBHOOK_SECRET is not set', async () => {
+            env.WEBHOOK_SECRET = undefined;
             const request = new Request('http://localhost', {
                 method: 'POST',
                 body: JSON.stringify({ message: { text: '/start', chat: { id: 1, type: 'private' }, from: { id: 1 } } })
             });
             const response = await worker.fetch(request, env);
-            expect(response.status).toBe(200);
+            expect(response.status).toBe(401);
         });
 
-        it('rejects request when WEBHOOK_SECRET is set but token is missing', async () => {
+        it('rejects request when token is missing', async () => {
             env.WEBHOOK_SECRET = 'super_secret';
             const request = new Request('http://localhost', {
                 method: 'POST',
@@ -72,7 +83,7 @@ describe('Telegram Join Request Bot', () => {
             expect(response.status).toBe(401);
         });
 
-        it('rejects request when WEBHOOK_SECRET is set but token is incorrect', async () => {
+        it('rejects request when token is incorrect', async () => {
             env.WEBHOOK_SECRET = 'super_secret';
             const request = new Request('http://localhost', {
                 method: 'POST',
@@ -87,7 +98,7 @@ describe('Telegram Join Request Bot', () => {
 
         it('allows request when WEBHOOK_SECRET is set and token is correct', async () => {
             env.WEBHOOK_SECRET = 'super_secret';
-            const request = new Request('http://localhost', {
+            const request = createAuthRequest('http://localhost', {
                 method: 'POST',
                 headers: {
                     'X-Telegram-Bot-Api-Secret-Token': 'super_secret'
@@ -100,7 +111,7 @@ describe('Telegram Join Request Bot', () => {
     });
 
     it('handleJoinRequest: saves request and sends questions', async () => {
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 chat_join_request: {
@@ -143,7 +154,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)")
             .bind('-100', 123, 1000, 2000, 'pending').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -166,7 +177,7 @@ describe('Telegram Join Request Bot', () => {
             .bind('-100', 124, 1000, 2000, 'pending').run();
         const { results: [req] } = await env.DB.prepare('SELECT * FROM requests WHERE user_id = ?').bind(124).all();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -198,7 +209,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?)")
             .bind('-100', 125, 1000, 2000, 'answered', 'My Answer').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -236,7 +247,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?)")
             .bind('-100', 125, 1000, 2000, 'answered', 'My Answer*').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -262,7 +273,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)")
             .bind('-100', userId, 1000, 2000, 'pending').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -289,7 +300,7 @@ describe('Telegram Join Request Bot', () => {
             await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?)")
                 .bind('-100', userId, 1000, 2000, 'answered', 'My Answer').run();
 
-            const request = new Request('http://localhost', {
+            const request = createAuthRequest('http://localhost', {
                 method: 'POST',
                 body: JSON.stringify({
                     message: {
@@ -316,7 +327,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?, ?)")
             .bind(reqId, '-100', userId, 1000, 2000, 'answered', 'Callback Answer').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 callback_query: {
@@ -516,13 +527,13 @@ describe('Telegram Join Request Bot', () => {
         const user = { id: userId, first_name: 'John', is_bot: false };
 
         // 1. First request
-        await worker.fetch(new Request('http://localhost', {
+        await worker.fetch(createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({ chat_join_request: { chat, from: user, date: 1000 } })
         }), env);
 
         // 2. Second request (same user)
-        await worker.fetch(new Request('http://localhost', {
+        await worker.fetch(createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({ chat_join_request: { chat, from: user, date: 2000 } })
         }), env);
@@ -550,7 +561,7 @@ describe('Telegram Join Request Bot', () => {
             }
         };
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify(payload)
         });
@@ -596,7 +607,7 @@ describe('Telegram Join Request Bot', () => {
         await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)")
             .bind('-100', targetUserId, 1000, 2000, 'pending').run();
 
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -632,7 +643,7 @@ describe('Telegram Join Request Bot', () => {
 
     it('handleAdminCommand: ignores commands from non-admins', async () => {
         const nonAdminId = 99999;
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({
                 message: {
@@ -660,7 +671,7 @@ describe('Telegram Join Request Bot', () => {
             .bind('-100', userId, 2000, 3000, 'superseded').run();
 
         // 3rd request
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({ chat_join_request: { chat, from: { id: userId, is_bot: false }, date: 3000 } })
         });
@@ -686,7 +697,7 @@ describe('Telegram Join Request Bot', () => {
         }
 
         // 5th request
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({ chat_join_request: { chat, from: { id: userId, is_bot: false, first_name: 'Spammer' }, date: 5000 } })
         });
@@ -749,7 +760,7 @@ describe('Telegram Join Request Bot', () => {
         }
 
         // 5th attempt
-        const request = new Request('http://localhost', {
+        const request = createAuthRequest('http://localhost', {
             method: 'POST',
             body: JSON.stringify({ chat_join_request: { chat, from: { id: userId, is_bot: false, first_name: 'Spammer' }, date: 5000 } })
         });
