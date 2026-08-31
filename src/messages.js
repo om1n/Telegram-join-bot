@@ -53,7 +53,13 @@ _Уже подавали заявку? Убедитесь, что пишете �
         admin: {
             status: (count) => `Активных (pending) заявок: ${count}`,
             config: (modChatId, adminUserId) => `MOD_CHAT_ID=${modChatId}\nADMIN_USER_ID=${adminUserId}`,
-            help: `/status — количество активных заявок\n/pending — список ожидающих ответов\n/config — показать конфиг\n/cleanup — удалить дубликаты заявок\n/reject <id> — отклонить заявку пользователя\n/force_cron — принудительный запуск задач по расписанию\n/help — это сообщение`,
+            help: `/status — количество активных заявок
+/pending — список ожидающих ответов
+/config — показать конфиг
+/cleanup — удалить дубликаты заявок
+/reject <id> — отклонить заявку пользователя
+/force_cron — принудительный запуск задач по расписанию
+/help — это сообщение`,
             unknown: 'Неизвестная команда. /help',
             emptyPending: 'Пусто',
             cleanupSuccess: 'Cleanup done.',
@@ -152,7 +158,13 @@ _Already applied? Make sure you're writing from the same Telegram account._`,
         admin: {
             status: (count) => `Active (pending) requests: ${count}`,
             config: (modChatId, adminUserId) => `MOD_CHAT_ID=${modChatId}\nADMIN_USER_ID=${adminUserId}`,
-            help: `/status — count pending\n/pending — list pending\n/config — show config\n/cleanup — remove duplicates\n/reject <id> — reject user\n/force_cron — run cron manually\n/help — this message`,
+            help: `/status — count pending
+/pending — list pending
+/config — show config
+/cleanup — remove duplicates
+/reject <id> — reject user
+/force_cron — run cron manually
+/help — this message`,
             unknown: 'Unknown command. /help',
             emptyPending: 'Empty',
             cleanupSuccess: 'Cleanup done.',
