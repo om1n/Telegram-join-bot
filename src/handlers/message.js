@@ -97,7 +97,12 @@ async function handleAdminCommand(text, msg, env) {
     }
     if (text.startsWith('/pending')) {
         const rows = await db.prepare("SELECT id,user_id,username,display_name,request_date,answer_text FROM requests WHERE status = 'pending' ORDER BY request_date DESC LIMIT 50").all();
-        const list = rows.results.map(r => `ID:${r.id} UID:${r.user_id} ${r.username ? ('@' + r.username) : r.display_name} Подана:${new Date(r.request_date * 1000).toISOString()} Ответ:${r.answer_text ? 'Да' : 'Нет'}`).join('\n') || MESSAGES.admin.emptyPending;
+        const list = rows.results.map(r => {
+            const name = r.username ? ('@' + r.username) : r.display_name;
+            const date = new Date(r.request_date * 1000).toISOString();
+            const answered = r.answer_text ? 'Да' : 'Нет';
+            return `ID:${r.id} UID:${r.user_id} ${name} Подана:${date} Ответ:${answered}`;
+        }).join('\n') || MESSAGES.admin.emptyPending;
         await sendToTelegram('sendMessage', { chat_id, text: list }, env);
         return;
     }
