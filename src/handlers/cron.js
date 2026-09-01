@@ -51,6 +51,9 @@ export async function processDailyReminders(env, now) {
     AND (last_reminder_ts IS NULL OR last_reminder_ts <= ?)
   `).bind(oneDayAgo, oneDayAgo).all();
 
+    const stmtUpdate = db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?');
+    const stmtInsert = db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)');
+
     for (let i = 0; i < rowsRemind.results.length; i += BATCH_SIZE) {
         const batch = rowsRemind.results.slice(i, i + BATCH_SIZE);
         const reminderPromises = batch.map(async (r) => {
@@ -61,12 +64,9 @@ export async function processDailyReminders(env, now) {
 
             await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.dailyReminder(daysLeft) }, env);
 
+            dbStatements.push(stmtUpdate.bind(now, r.id));
             dbStatements.push(
-                db.prepare('UPDATE requests SET last_reminder_ts = ? WHERE id = ?').bind(now, r.id)
-            );
-            dbStatements.push(
-                db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft }))
+                stmtInsert.bind(r.id, r.user_id, 'reminder_sent', now, JSON.stringify({ days_left: daysLeft }))
             );
 
             stats.remindersSent++;
@@ -102,6 +102,9 @@ export async function processTimeouts(env, now) {
     `).bind(now).run();
 
     const rowsExp = await db.prepare('SELECT * FROM requests WHERE expires_at <= ? AND status IN ("pending","answered")').bind(now).all();
+    const stmtUpdateTimeout = db.prepare('UPDATE requests SET status = ? WHERE id = ?');
+    const stmtInsertEvent = db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)');
+
     for (let i = 0; i < rowsExp.results.length; i += BATCH_SIZE) {
         const batch = rowsExp.results.slice(i, i + BATCH_SIZE);
         const timeoutPromises = batch.map(async (r) => {
@@ -120,11 +123,10 @@ export async function processTimeouts(env, now) {
 
                 if (desc.includes('USER_ID_INVALID') || desc.includes('user is deactivated')) {
                     dbStatements.push(
-                        db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('user_missing_or_banned', r.id)
+                        stmtUpdateTimeout.bind('user_missing_or_banned', r.id)
                     );
                     dbStatements.push(
-                        db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                            .bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc }))
+                        stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc }))
                     );
                     stats.timeoutsProcessed++;
                     stats.errors.push(`User ${r.user_id} invalid (USER_ID_INVALID/deactivated), marked 'user_missing_or_banned'.`);
@@ -133,11 +135,10 @@ export async function processTimeouts(env, now) {
 
                 if (desc.includes('HIDE_REQUESTER_MISSING')) {
                     dbStatements.push(
-                        db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('request_no_longer_valid', r.id)
+                        stmtUpdateTimeout.bind('request_no_longer_valid', r.id)
                     );
                     dbStatements.push(
-                        db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                            .bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc }))
+                        stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc }))
                     );
                     stats.timeoutsProcessed++;
                     stats.errors.push(`User ${r.user_id} missing request (HIDE_REQUESTER_MISSING), marked 'request_no_longer_valid'.`);
@@ -149,11 +150,10 @@ export async function processTimeouts(env, now) {
             }
 
             dbStatements.push(
-                db.prepare('UPDATE requests SET status = ? WHERE id = ?').bind('timed_out', r.id)
+                stmtUpdateTimeout.bind('timed_out', r.id)
             );
             dbStatements.push(
-                db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'auto_rejected', now, JSON.stringify({ reason: 'timeout' }))
+                stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected', now, JSON.stringify({ reason: 'timeout' }))
             );
             stats.timeoutsProcessed++;
 
