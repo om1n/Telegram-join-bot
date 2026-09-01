@@ -5,6 +5,132 @@ import { handleMessage } from './message';
 // Mock fetch for all Telegram API calls
 global.fetch = vi.fn();
 
+describe('handleAdminCommand - Other Commands', () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        env.MOD_CHAT_ID = '-100999';
+        env.ADMIN_USER_ID = '999999';
+        env.TELEGRAM_BOT_TOKEN = 'test_token';
+        env.WEBHOOK_SECRET = 'test_secret';
+
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            username TEXT,
+            display_name TEXT,
+            request_date INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            answer_text TEXT,
+            answer_date INTEGER,
+            confirmed_date INTEGER,
+            reminder_3_sent INTEGER DEFAULT 0,
+            reminder_6_sent INTEGER DEFAULT 0,
+            last_reminder_ts INTEGER
+        )`).run();
+
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id INTEGER,
+            user_id INTEGER,
+            event_type TEXT,
+            event_ts INTEGER,
+            data TEXT
+        )`).run();
+
+        await env.DB.prepare('DELETE FROM requests').run();
+        await env.DB.prepare('DELETE FROM events').run();
+
+        fetch.mockImplementation((url, options) => {
+            return Promise.resolve({
+                json: () => Promise.resolve({ ok: true, result: {} }),
+                ok: true,
+            });
+        });
+    });
+
+    const createAdminMessage = (text) => ({
+        text,
+        chat: { type: 'private', id: 999999 },
+        from: { id: 999999 },
+    });
+
+    it('handles /status command correctly', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        await env.DB.prepare(
+            "INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)"
+        ).bind('-1001', 123, now - 100, now + 86400, 'pending').run();
+        await env.DB.prepare(
+            "INSERT INTO requests (chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?)"
+        ).bind('-1001', 124, now - 100, now + 86400, 'pending').run();
+
+        await handleMessage(createAdminMessage('/status'), env);
+
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        expect(sendMessageCall).toBeDefined();
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toBe('Активных (pending) заявок: 2');
+    });
+
+    it('handles /pending command correctly with empty list', async () => {
+        await handleMessage(createAdminMessage('/pending'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toBe('Пусто');
+    });
+
+    it('handles /pending command correctly with active requests', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        await env.DB.prepare(
+            "INSERT INTO requests (id, chat_id, user_id, username, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).bind(1, '-1001', 123, 'user123', now - 100, now + 86400, 'pending').run();
+
+        await handleMessage(createAdminMessage('/pending'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toContain('ID:1 UID:123 @user123');
+        expect(body.text).toContain('Ответ:Нет');
+    });
+
+    it('handles /config command correctly', async () => {
+        await handleMessage(createAdminMessage('/config'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toBe('MOD_CHAT_ID=-100999\nADMIN_USER_ID=999999');
+    });
+
+    it('handles /help command correctly', async () => {
+        await handleMessage(createAdminMessage('/help'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toContain('/status — количество активных заявок');
+    });
+
+    it('handles /cleanup command correctly', async () => {
+        await handleMessage(createAdminMessage('/cleanup'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toBe('Cleanup done.');
+    });
+
+    it('handles /force_cron command correctly', async () => {
+        await handleMessage(createAdminMessage('/force_cron'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toContain('Cron tasks executed manually.');
+        expect(body.text).toContain('Reminders: 0');
+        expect(body.text).toContain('Timeouts: 0');
+    });
+
+    it('handles unknown admin commands correctly', async () => {
+        await handleMessage(createAdminMessage('/unknown_command_here'), env);
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toBe('Неизвестная команда. /help');
+    });
+});
+
 describe('handleAdminCommand - /reject', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
