@@ -8,16 +8,7 @@ import { sendToTelegram, escapeMarkdownLegacy, getChatInfo, formatGroupLink } fr
  * @param {Object} env Cloudflare worker environment.
  * @param {Boolean} isAutoForward Whether this confirmation was triggered automatically by cron.
  */
-export async function confirmRequest(req, user_id, env, isAutoForward = false) {
-    const db = env.DB;
-    const now = Math.floor(Date.now() / 1000);
-
-    // 1. Update DB State
-    await db.prepare('UPDATE requests SET status = ?, confirmed_date = ? WHERE id = ?')
-        .bind('confirmed', now, req.id).run();
-    await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-        .bind(req.id, user_id, 'confirmed', now, JSON.stringify({ auto_forward: isAutoForward })).run();
-
+export async function sendConfirmationNotifications(req, user_id, env, isAutoForward = false) {
     // 2. Fetch Group Info for Moderation Message
     const chatInfo = await getChatInfo(req.chat_id, env);
     let groupLink = '';
@@ -45,4 +36,17 @@ export async function confirmRequest(req, user_id, env, isAutoForward = false) {
     // 4. Notify User
     const userMessage = isAutoForward ? MESSAGES.autoForwardedMessage : MESSAGES.sentToModerators;
     await sendToTelegram('sendMessage', { chat_id: user_id, text: userMessage }, env);
+}
+
+export async function confirmRequest(req, user_id, env, isAutoForward = false) {
+    const db = env.DB;
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Update DB State
+    await db.prepare('UPDATE requests SET status = ?, confirmed_date = ? WHERE id = ?')
+        .bind('confirmed', now, req.id).run();
+    await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
+        .bind(req.id, user_id, 'confirmed', now, JSON.stringify({ auto_forward: isAutoForward })).run();
+
+    await sendConfirmationNotifications(req, user_id, env, isAutoForward);
 }

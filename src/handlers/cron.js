@@ -1,7 +1,7 @@
 import { MESSAGES } from '../messages.js';
 import { CONFIG } from '../config.js';
 import { sendToTelegram, escapeMarkdownLegacy } from '../services/telegram.js';
-import { confirmRequest } from '../services/confirmation.js';
+import { sendConfirmationNotifications } from '../services/confirmation.js';
 import { cleanupDuplicates } from '../services/database.js';
 
 const BATCH_SIZE = 10;
@@ -9,12 +9,16 @@ const BATCH_SIZE = 10;
 export async function processAutoForwards(env, now) {
     const db = env.DB;
     const stats = { autoForwardsProcessed: 0, errors: [] };
+    const dbStatements = [];
     const oneHourAgo = now - 3600;
     const rowsToForward = await db.prepare(`
         SELECT * FROM requests 
         WHERE status = 'answered' 
         AND answer_date <= ?
     `).bind(oneHourAgo).all();
+
+    const stmtUpdate = db.prepare('UPDATE requests SET status = ?, confirmed_date = ? WHERE id = ?');
+    const stmtInsert = db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)');
 
     for (let i = 0; i < rowsToForward.results.length; i += BATCH_SIZE) {
         const batch = rowsToForward.results.slice(i, i + BATCH_SIZE);
@@ -26,7 +30,12 @@ export async function processAutoForwards(env, now) {
             }
 
             try {
-                await confirmRequest(r, r.user_id, env, true);
+                dbStatements.push(stmtUpdate.bind('confirmed', now, r.id));
+                dbStatements.push(
+                    stmtInsert.bind(r.id, r.user_id, 'confirmed', now, JSON.stringify({ auto_forward: true }))
+                );
+
+                await sendConfirmationNotifications(r, r.user_id, env, true);
                 stats.autoForwardsProcessed++;
             } catch (err) {
                 console.error(`Auto-forward error for user ${r.user_id}`, err);
@@ -36,6 +45,11 @@ export async function processAutoForwards(env, now) {
 
         await Promise.all(forwardPromises);
     }
+
+    for (let i = 0; i < dbStatements.length; i += 100) {
+        await db.batch(dbStatements.slice(i, i + 100));
+    }
+
     return stats;
 }
 
