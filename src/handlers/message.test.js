@@ -325,6 +325,32 @@ describe('handleAdminCommand - /reject', () => {
         expect(dbResult.status).toBe('pending');
     });
 
+    it('handles manual reject exception thrown by sendToTelegram', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        await env.DB.prepare(
+            "INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(1, '-1001', 123, now - 100, now + 86400, 'pending').run();
+
+        fetch.mockImplementation((url, options) => {
+            if (url.includes('declineChatJoinRequest')) {
+                throw new Error('Unexpected exception during fetch');
+            }
+            return Promise.resolve({
+                json: () => Promise.resolve({ ok: true, result: {} }),
+                ok: true,
+            });
+        });
+
+        await handleMessage(createAdminMessage('/reject 123'), env);
+
+        const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
+        const body = JSON.parse(sendMessageCall[1].body);
+        expect(body.text).toContain('Pending status kept. Net error: Unexpected exception during fetch');
+
+        const dbResult = await env.DB.prepare('SELECT status FROM requests WHERE id = 1').first();
+        expect(dbResult.status).toBe('pending');
+    });
+
     it('handles manual reject network error and keeps pending status', async () => {
         const now = Math.floor(Date.now() / 1000);
         await env.DB.prepare(
