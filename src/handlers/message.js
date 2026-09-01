@@ -199,7 +199,10 @@ async function handleRejectCommand(text, chat_id, env) {
     }
 
     if (dbStatements.length > 0) {
-        await db.batch(dbStatements);
+        const DB_BATCH_SIZE = 100;
+        for (let i = 0; i < dbStatements.length; i += DB_BATCH_SIZE) {
+            await db.batch(dbStatements.slice(i, i + DB_BATCH_SIZE));
+        }
     }
 
     const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
