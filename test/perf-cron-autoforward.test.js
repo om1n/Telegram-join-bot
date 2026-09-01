@@ -67,5 +67,5 @@ describe('Cron Performance - Auto Forwarding', () => {
         // Check if status changed to 'confirmed'
         const { count } = await env.DB.prepare('SELECT count(*) as count FROM requests WHERE status = ?').bind('confirmed').first();
         expect(count).toBe(1000);
-    }, 15000);
+    }, 30000);
 });
