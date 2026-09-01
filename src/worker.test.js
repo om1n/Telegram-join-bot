@@ -21,3 +21,21 @@ describe('Worker Webhook Authentication - Timing Attack Fix', () => {
         expect(response.status).toBe(401);
     });
 });
+
+describe('Worker Error Handling', () => {
+    it('should return 500 on internal error during fetch', async () => {
+        const env = { WEBHOOK_SECRET: 'secret123' };
+        const request = new Request('http://localhost', {
+            method: 'POST',
+            headers: { 'X-Telegram-Bot-Api-Secret-Token': 'secret123' },
+            body: '{}'
+        });
+        request.json = async () => {
+            throw new Error('Test error');
+        };
+        const response = await worker.fetch(request, env);
+        expect(response.status).toBe(500);
+        const text = await response.text();
+        expect(text).toBe('error');
+    });
+});
