@@ -75,6 +75,15 @@ describe('handleJoinRequest', () => {
         };
     });
 
+    it('should ignore request if ALLOWED_CHAT_ID is set and chat_id does not match', async () => {
+        mockEnv.ALLOWED_CHAT_ID = '-10099999999';
+
+        await handleJoinRequest(baseJoinRequest, mockEnv);
+
+        expect(executedQueries.length).toBe(0);
+        expect(sendToTelegram).not.toHaveBeenCalled();
+    });
+
     it('should handle a normal request (0 spam attempts)', async () => {
         await handleJoinRequest(baseJoinRequest, mockEnv);
 

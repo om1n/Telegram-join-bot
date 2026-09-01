@@ -13,6 +13,10 @@ export async function handleJoinRequest(jr, env) {
     const chat_id = jr.chat.id.toString();
     const user_id = user.id;
 
+    if (env.ALLOWED_CHAT_ID && chat_id !== env.ALLOWED_CHAT_ID) {
+        return;
+    }
+
     // Check for SPAM (repeated requests)
     const history = await db.prepare('SELECT COUNT(*) as c FROM requests WHERE user_id = ? AND chat_id = ?').bind(user_id, chat_id).all();
     const attemptCount = (history.results && history.results[0] && history.results[0].c) ? history.results[0].c : 0;
