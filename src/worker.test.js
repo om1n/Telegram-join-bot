@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import worker from './worker.js';
+import { processRemindersAndTimeouts } from './handlers/cron.js';
+
+vi.mock('./handlers/cron.js', () => ({
+    processRemindersAndTimeouts: vi.fn()
+}));
 
 describe('Worker Webhook Authentication - Timing Attack Fix', () => {
     it('should correctly reject invalid tokens and missing tokens', async () => {
@@ -37,5 +42,19 @@ describe('Worker Error Handling', () => {
         expect(response.status).toBe(500);
         const text = await response.text();
         expect(text).toBe('error');
+    });
+});
+
+describe('Worker Scheduled Handler', () => {
+    it('should catch and log errors gracefully from scheduled task', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const testError = new Error('Cron failed');
+        processRemindersAndTimeouts.mockRejectedValueOnce(testError);
+
+        await worker.scheduled(null, {}, null);
+
+        expect(consoleSpy).toHaveBeenCalledWith('scheduled error', testError);
+
+        consoleSpy.mockRestore();
     });
 });
