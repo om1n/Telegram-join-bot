@@ -322,10 +322,10 @@ describe('Telegram Join Request Bot', () => {
 
     it('handleCallbackQuery: confirms request and removes button', async () => {
         const userId = 250;
-        const reqId = 1;
         // Setup answered request
-        await env.DB.prepare("INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?, ?)")
-            .bind(reqId, '-100', userId, 1000, 2000, 'answered', 'Callback Answer').run();
+        const inserted = await env.DB.prepare("INSERT INTO requests (chat_id, user_id, request_date, expires_at, status, answer_text) VALUES (?, ?, ?, ?, ?, ?) RETURNING id")
+            .bind('-100', userId, 1000, 2000, 'answered', 'Callback Answer').first();
+        const reqId = inserted.id;
 
         const request = createAuthRequest('http://localhost', {
             method: 'POST',

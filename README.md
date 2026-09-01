@@ -81,7 +81,7 @@ To function correctly, the bot must be an Administrator in the target group with
    wrangler secret put TELEGRAM_BOT_TOKEN
    wrangler secret put MOD_CHAT_ID
    wrangler secret put ADMIN_USER_ID
-   wrangler secret put WEBHOOK_SECRET # Optional, but highly recommended for security
+   wrangler secret put WEBHOOK_SECRET # Required for authenticating Telegram webhook requests
    ```
 
 ### Hardcoded Configs
@@ -112,14 +112,16 @@ npm run deploy
 ```
 
 **Crucial Step: Set Webhook**
-After deployment, explicitly tell Telegram to route events to your Cloudflare Worker. We strictly define `allowed_updates` so Telegram sends everything we need (including button clicks):
+After deployment, explicitly tell Telegram to route events to your Cloudflare Worker with your secret token:
 
 ```bash
-# If using a WEBHOOK_SECRET, add `-F "secret_token=<YOUR_WEBHOOK_SECRET>"` to this command
-curl -F "url=https://<YOUR_WORKER_URL>" -F "allowed_updates=[\"message\", \"chat_member\", \"chat_join_request\", \"callback_query\"]" "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook"
+curl -F "url=https://<YOUR_WORKER_URL>" \
+     -F "secret_token=<YOUR_WEBHOOK_SECRET>" \
+     -F "allowed_updates=[\"message\", \"chat_member\", \"chat_join_request\", \"callback_query\"]" \
+     "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook"
 ```
 
-Alternatively, use the provided helper script: `./scripts/setup-webhook.sh` which will also prompt you for the optional webhook secret.
+Alternatively, use the provided helper script: `./scripts/setup-webhook.sh`.
 
 ## Admin Commands
 
@@ -150,7 +152,7 @@ The bot uses the following statuses for requests:
 
 ## Development
 
-Run tests:
+Run tests using Vitest (with `@cloudflare/vitest-pool-workers`):
 
 ```bash
 npm test
@@ -158,9 +160,10 @@ npm test
 
 ## Project Structure
 
-- `src/handlers/`: Business logic modules (join requests, messages, cron).
-- `src/services/`: External integrations (Telegram API).
-- `src/config.js`: Configuration constants (language, timeouts).
-- `src/worker.js`: Cloudflare Worker entry point.
+- `src/handlers/`: Business logic modules (`join.js`, `member.js`, `message.js`, `cron.js`).
+- `src/services/`: External integrations & helpers (`telegram.js`, `confirmation.js`, `database.js`).
+- `src/config.js`: Configuration constants (language, timeouts, limits).
+- `src/worker.js`: Cloudflare Worker entry point (fetch & scheduled cron handlers).
 - `src/messages.js`: Internationalized message dictionary.
 - `schema.sql`: D1 Database schema.
+- `test/` & `src/**/*.test.js`: Vitest test suites.
