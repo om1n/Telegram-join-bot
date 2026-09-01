@@ -73,11 +73,10 @@ export async function processDailyReminders(env, now) {
         });
 
         await Promise.all(reminderPromises);
+    }
 
-        if (dbStatements.length > 0) {
-            await db.batch(dbStatements);
-            dbStatements.length = 0;
-        }
+    for (let i = 0; i < dbStatements.length; i += 100) {
+        await db.batch(dbStatements.slice(i, i + 100));
     }
 
     return stats;
@@ -165,11 +164,10 @@ export async function processTimeouts(env, now) {
         });
 
         await Promise.all(timeoutPromises);
+    }
 
-        if (dbStatements.length > 0) {
-            await db.batch(dbStatements);
-            dbStatements.length = 0;
-        }
+    for (let i = 0; i < dbStatements.length; i += 100) {
+        await db.batch(dbStatements.slice(i, i + 100));
     }
 
     return stats;
