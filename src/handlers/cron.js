@@ -20,31 +20,28 @@ export async function processAutoForwards(env, now) {
     const stmtUpdate = db.prepare('UPDATE requests SET status = ?, confirmed_date = ? WHERE id = ?');
     const stmtInsert = db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)');
 
-    for (let i = 0; i < rowsToForward.results.length; i += BATCH_SIZE) {
-        const batch = rowsToForward.results.slice(i, i + BATCH_SIZE);
-        const forwardPromises = batch.map(async (r) => {
-            if (env.DEBUG === 'true') {
-                console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
-            } else {
-                console.info(`Auto-forwarding request ${r.id} for user ${r.user_id} (1 hour passed)`);
-            }
+    const forwardPromises = rowsToForward.results.map(async (r) => {
+        if (env.DEBUG === 'true') {
+            console.debug(`[DEBUG] Auto-forwarding request ${r.id} for user ${r.user_id}`);
+        } else {
+            console.info(`Auto-forwarding request ${r.id} for user ${r.user_id} (1 hour passed)`);
+        }
 
-            try {
-                dbStatements.push(stmtUpdate.bind('confirmed', now, r.id));
-                dbStatements.push(
-                    stmtInsert.bind(r.id, r.user_id, 'confirmed', now, JSON.stringify({ auto_forward: true }))
-                );
+        try {
+            dbStatements.push(stmtUpdate.bind('confirmed', now, r.id));
+            dbStatements.push(
+                stmtInsert.bind(r.id, r.user_id, 'confirmed', now, JSON.stringify({ auto_forward: true }))
+            );
 
-                await sendConfirmationNotifications(r, r.user_id, env, true);
-                stats.autoForwardsProcessed++;
-            } catch (err) {
-                console.error(`Auto-forward error for user ${r.user_id}`, err);
-                stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
-            }
-        });
+            await sendConfirmationNotifications(r, r.user_id, env, true);
+            stats.autoForwardsProcessed++;
+        } catch (err) {
+            console.error(`Auto-forward error for user ${r.user_id}`, err);
+            stats.errors.push(`Auto-forward error for ${r.user_id}: ${err.message}`);
+        }
+    });
 
-        await Promise.all(forwardPromises);
-    }
+    await Promise.all(forwardPromises);
 
     for (let i = 0; i < dbStatements.length; i += 100) {
         await db.batch(dbStatements.slice(i, i + 100));
@@ -171,10 +168,12 @@ export async function processTimeouts(env, now) {
             );
             stats.timeoutsProcessed++;
 
-            await sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.timeoutUser }, env);
-
             const modMsg = MESSAGES.moderator.autoReject(r.id, escapeMarkdownLegacy(r.username), escapeMarkdownLegacy(r.display_name), r.user_id);
-            await sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: modMsg, parse_mode: 'Markdown' }, env);
+
+            await Promise.all([
+                sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.timeoutUser }, env),
+                sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: modMsg, parse_mode: 'Markdown' }, env)
+            ]);
         });
 
         await Promise.all(timeoutPromises);
