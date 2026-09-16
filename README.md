@@ -84,6 +84,10 @@ To function correctly, the bot must be an Administrator in the target group with
    wrangler secret put WEBHOOK_SECRET # Required for authenticating Telegram webhook requests
    ```
 
+5. **Optional Environment Variables** (configured in `wrangler.toml` under `[vars]` or as secrets):
+   - `ALLOWED_CHAT_ID`: Restrict join request handling strictly to this Telegram chat ID (e.g. `"-1001234567890"`). Requests for any other chat are ignored.
+   - `DEBUG`: Set to `"true"` to enable verbose debug logging.
+
 ### Hardcoded Configs
 
 The following settings can be adjusted in `src/config.js`:

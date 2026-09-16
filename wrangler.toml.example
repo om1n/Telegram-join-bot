@@ -9,3 +9,7 @@ crons = ["0 * * * *"] # Run once an hour
 binding = "DB"
 database_name = "joinbot"
 database_id = "YOUR_DATABASE_ID_HERE"
+
+# [vars]
+# ALLOWED_CHAT_ID = "-1001234567890" # Optional: restrict join requests to this chat ID
+# DEBUG = "false"                     # Optional: set to "true" for verbose debug logging
