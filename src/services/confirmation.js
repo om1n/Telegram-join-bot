@@ -31,11 +31,14 @@ export async function sendConfirmationNotifications(req, user_id, env, isAutoFor
         new Date(req.expires_at * 1000).toISOString(),
         groupLink
     );
-    await sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: moderatorMessage, parse_mode: 'Markdown' }, env);
 
     // 4. Notify User
     const userMessage = isAutoForward ? MESSAGES.autoForwardedMessage : MESSAGES.sentToModerators;
-    await sendToTelegram('sendMessage', { chat_id: user_id, text: userMessage }, env);
+
+    await Promise.all([
+        sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: moderatorMessage, parse_mode: 'Markdown' }, env),
+        sendToTelegram('sendMessage', { chat_id: user_id, text: userMessage }, env)
+    ]);
 }
 
 export async function confirmRequest(req, user_id, env, isAutoForward = false) {
