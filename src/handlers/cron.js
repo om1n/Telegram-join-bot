@@ -97,6 +97,7 @@ export async function processTimeouts(env, now) {
     const db = env.DB;
     const stats = { timeoutsProcessed: 0, errors: [] };
     const dbStatements = [];
+    const notificationsToProcess = [];
 
     await db.prepare(`
         UPDATE requests
@@ -170,10 +171,8 @@ export async function processTimeouts(env, now) {
 
             const modMsg = MESSAGES.moderator.autoReject(r.id, escapeMarkdownLegacy(r.username), escapeMarkdownLegacy(r.display_name), r.user_id);
 
-            await Promise.all([
-                sendToTelegram('sendMessage', { chat_id: r.user_id, text: MESSAGES.timeoutUser }, env),
-                sendToTelegram('sendMessage', { chat_id: env.MOD_CHAT_ID, text: modMsg, parse_mode: 'Markdown' }, env)
-            ]);
+            notificationsToProcess.push({ chat_id: r.user_id, text: MESSAGES.timeoutUser });
+            notificationsToProcess.push({ chat_id: env.MOD_CHAT_ID, text: modMsg, parse_mode: 'Markdown' });
         });
 
         await Promise.all(timeoutPromises);
@@ -181,6 +180,14 @@ export async function processTimeouts(env, now) {
 
     for (let i = 0; i < dbStatements.length; i += 100) {
         await db.batch(dbStatements.slice(i, i + 100));
+    }
+
+    // Process notifications safely after DB is updated
+    for (let i = 0; i < notificationsToProcess.length; i += BATCH_SIZE) {
+        const batch = notificationsToProcess.slice(i, i + BATCH_SIZE);
+        await Promise.allSettled(
+            batch.map(n => sendToTelegram('sendMessage', n, env))
+        );
     }
 
     return stats;
