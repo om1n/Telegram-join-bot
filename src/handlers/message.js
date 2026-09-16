@@ -156,29 +156,28 @@ async function handleRejectCommand(text, chat_id, env) {
     let errors = [];
     let dbStatements = [];
 
-    const results = [];
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < rows.results.length; i += BATCH_SIZE) {
-        const batch = rows.results.slice(i, i + BATCH_SIZE);
-        const batchPromises = batch.map(async (r) => {
-            try {
-                const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
-                if (!res || !res.ok) {
-                    const desc = res ? res.description : 'Unknown';
-                    if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                        return { success: true, missing: true, r };
-                    }
-                    return { success: false, error: `API Error: ${desc}` };
+    const batchPromises = rows.results.map(async (r) => {
+        try {
+            const res = await sendToTelegram('declineChatJoinRequest', { chat_id: r.chat_id, user_id: r.user_id }, env);
+            if (!res || !res.ok) {
+                const desc = res ? res.description : 'Unknown';
+                if (desc.includes('HIDE_REQUESTER_MISSING')) {
+                    return { success: true, missing: true, r };
                 }
-                return { success: true, missing: false, r };
-            } catch (err) {
-                console.error('Manual reject error', err);
-                return { success: false, error: `Pending status kept. Net error: ${err.message}` };
+                return { success: false, error: `API Error: ${desc}` };
             }
-        });
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
-    }
+            return { success: true, missing: false, r };
+        } catch (err) {
+            console.error('Manual reject error', err);
+            return { success: false, error: `Pending status kept. Net error: ${err.message}` };
+        }
+    });
+    const results = await Promise.all(batchPromises);
+
+    const updateStmt = db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?");
+    const insertEventStmt = db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)');
+    const missingData = JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' });
+    const regularData = JSON.stringify({ admin_id: env.ADMIN_USER_ID });
 
     for (const result of results) {
         if (!result.success) {
@@ -186,13 +185,11 @@ async function handleRejectCommand(text, chat_id, env) {
             errors.push(result.error);
         } else {
             const { missing, r } = result;
-            dbStatements.push(db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(r.id));
+            dbStatements.push(updateStmt.bind(r.id));
             if (missing) {
-                dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID, note: 'request was missing in TG' })));
+                dbStatements.push(insertEventStmt.bind(r.id, r.user_id, 'admin_rejected_missing', Math.floor(Date.now() / 1000), missingData));
             } else {
-                dbStatements.push(db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                    .bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), JSON.stringify({ admin_id: env.ADMIN_USER_ID })));
+                dbStatements.push(insertEventStmt.bind(r.id, r.user_id, 'admin_rejected', Math.floor(Date.now() / 1000), regularData));
             }
             rejectedCount++;
         }
