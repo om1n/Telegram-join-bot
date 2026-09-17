@@ -82,6 +82,14 @@ describe('handleChatMember', () => {
         expect(executedQueries[0].query).toContain('INSERT INTO events');
         expect(executedQueries[0].params[2]).toBe('debug_chat_member'); // Index 2 is event_type
 
+        const debugData = JSON.parse(executedQueries[0].params[4]);
+        expect(debugData.from.first_name).toBeUndefined();
+        expect(debugData.from.last_name).toBeUndefined();
+        expect(debugData.from.username).toBeUndefined();
+        expect(debugData.new_chat_member.user.first_name).toBeUndefined();
+        expect(debugData.new_chat_member.user.last_name).toBeUndefined();
+        expect(debugData.new_chat_member.user.username).toBeUndefined();
+
         // Verify Telegram calls
         expect(sendToTelegram).toHaveBeenCalledTimes(2);
 

@@ -7,9 +7,22 @@ export async function handleChatMember(cm, env) {
     // DEBUG event
     if (env.DEBUG === 'true') {
         try {
+            const safeCm = {
+                ...cm,
+                from: cm.from ? { id: cm.from.id, is_bot: cm.from.is_bot } : undefined,
+                chat: cm.chat ? { id: cm.chat.id, type: cm.chat.type } : undefined,
+                old_chat_member: cm.old_chat_member ? {
+                    ...cm.old_chat_member,
+                    user: cm.old_chat_member.user ? { id: cm.old_chat_member.user.id, is_bot: cm.old_chat_member.user.is_bot } : undefined
+                } : undefined,
+                new_chat_member: cm.new_chat_member ? {
+                    ...cm.new_chat_member,
+                    user: cm.new_chat_member.user ? { id: cm.new_chat_member.user.id, is_bot: cm.new_chat_member.user.is_bot } : undefined
+                } : undefined
+            };
             const db = env.DB;
             await db.prepare('INSERT INTO events (request_id,user_id,event_type,event_ts,data) VALUES (?,?,?,?,?)')
-                .bind(0, cm.from.id, 'debug_chat_member', Math.floor(Date.now() / 1000), JSON.stringify(cm)).run();
+                .bind(0, cm.from.id, 'debug_chat_member', Math.floor(Date.now() / 1000), JSON.stringify(safeCm)).run();
         } catch (e) {
             console.error('Debug log error', e);
         }
