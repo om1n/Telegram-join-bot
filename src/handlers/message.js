@@ -151,6 +151,21 @@ async function handleRejectCommand(text, chat_id, env) {
         return;
     }
 
+    const { rejectedCount, failCount, errors, dbStatements } = await processRejectionBatch(rows, env);
+
+    if (dbStatements.length > 0) {
+        const DB_BATCH_SIZE = 100;
+        for (let i = 0; i < dbStatements.length; i += DB_BATCH_SIZE) {
+            await db.batch(dbStatements.slice(i, i + DB_BATCH_SIZE));
+        }
+    }
+
+    const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
+    await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
+}
+
+async function processRejectionBatch(rows, env) {
+    const db = env.DB;
     let rejectedCount = 0;
     let failCount = 0;
     let errors = [];
@@ -195,14 +210,6 @@ async function handleRejectCommand(text, chat_id, env) {
         }
     }
 
-    if (dbStatements.length > 0) {
-        const DB_BATCH_SIZE = 100;
-        for (let i = 0; i < dbStatements.length; i += DB_BATCH_SIZE) {
-            await db.batch(dbStatements.slice(i, i + DB_BATCH_SIZE));
-        }
-    }
-
-    const msg = MESSAGES.admin.rejectResult(targetUserId, rejectedCount, failCount, errors);
-    await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
+    return { rejectedCount, failCount, errors, dbStatements };
 }
 
