@@ -183,33 +183,6 @@ describe('handleAdminCommand - /reject', () => {
     });
 
     it('returns usage message if user ID is not provided', async () => {
-        // Sending '/reject a b' bypasses trim() cutting out trailing space, and text becomes '/reject a b'.
-        // To test handleRejectCommand('a b', chat_id, env), we should actually test '/reject' falling through?
-        // Wait, the prompt says test handleRejectCommand. It's exported? No, it's not exported.
-        // If we send `/reject a` where `a` is not an ID but rather we want no target user ID...
-        // Actually, if we send `/reject` (without space), `text.startsWith('/reject ')` is false, it falls to unknown command.
-        // We can just call handleRejectCommand directly? No, it's not exported.
-        // In the handler it splits by space, and accesses `parts[1]`.
-        // If we send `'/reject '`, trim() makes it `'/reject'`.
-        // If we send `'/reject  '`, trim makes it `'/reject'`.
-        // Is there any way `text` inside `handleRejectCommand` has `text.split(' ')[1]` as falsy when called from `handleAdminCommand`?
-        // Yes, if we send `'/reject a'` but then there's no way. Wait. Wait. Wait.
-        // What if we don't send a message? What if we bypass the `trim()` logic?
-        // We can't bypass `trim()` logic from `handleMessage`.
-        // If we send `'/reject  '` it's trimmed to `'/reject'`.
-        // But what if we send `'/reject \n'` ? Wait, trim() removes \n.
-        // The implementation in `handleMessage`: `if (text.startsWith('/reject ')) { await handleRejectCommand(text, chat_id, env); }`
-        // Wait! If `trim()` removes trailing spaces, `text` will NEVER start with `'/reject '` if it's just `'/reject '`!
-        // It must have something AFTER the space.
-        // So how can `targetUserId` ever be empty when it enters `handleRejectCommand`?
-        // Actually, `text` in `handleAdminCommand` is the trimmed text.
-        // If the user sends `/reject `, `text` is `/reject`.
-        // `text.startsWith('/reject ')` will be false!
-        // So the `if (!targetUserId)` branch inside `handleRejectCommand` is theoretically UNREACHABLE via `handleMessage`!
-        // UNLESS... wait, what if the user sends `/reject  a` (double space)?
-        // Then `text` is `/reject  a`.
-        // `text.split(' ')` is `['/reject', '', 'a']`.
-        // `text.split(' ')[1]` is `''`, which is falsy!
         await handleMessage(createAdminMessage('/reject  a'), env);
 
         const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
