@@ -146,4 +146,35 @@ describe('handleCallbackQuery', () => {
         const dbResult = await env.DB.prepare('SELECT status FROM requests WHERE id = 1').first();
         expect(dbResult.status).toBe('pending');
     });
+
+    it('gracefully handles error when removing inline keyboard fails', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetch.mockImplementation((url) => {
+            if (url.includes('/editMessageReplyMarkup')) {
+                return Promise.reject(new Error('Network error'));
+            }
+            return Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({ ok: true, result: {} })
+            });
+        });
+
+        const now = Math.floor(Date.now() / 1000);
+        await env.DB.prepare(
+            "INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(1, '-100', 42, now - 100, now + 86400, 'answered').run();
+
+        await handleCallbackQuery(baseCallback, env);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'Failed to remove inline keyboard from confirmation message',
+            expect.any(Error)
+        );
+
+        // Verify confirmRequest still runs and changes the status to 'confirmed'
+        const dbResult = await env.DB.prepare('SELECT status FROM requests WHERE id = 1').first();
+        expect(dbResult.status).toBe('confirmed');
+
+        consoleErrorSpy.mockRestore();
+    });
 });
