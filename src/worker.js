@@ -16,7 +16,16 @@ export default {
       // Security: Webhook Authentication
       const token = request.headers.get('X-Telegram-Bot-Api-Secret-Token') || '';
       const secret = env.WEBHOOK_SECRET || '';
-      if (!env.WEBHOOK_SECRET || token !== secret) {
+      const encoder = new TextEncoder();
+      const secretBytes = encoder.encode(secret);
+      const tokenBytes = encoder.encode(token);
+
+      let isAuthorized = false;
+      if (secretBytes.length === tokenBytes.length) {
+        isAuthorized = crypto.subtle.timingSafeEqual(secretBytes, tokenBytes);
+      }
+
+      if (!env.WEBHOOK_SECRET || !isAuthorized) {
         console.warn('Unauthorized webhook request: invalid or missing secret token');
         return new Response('Unauthorized', { status: 401 });
       }
