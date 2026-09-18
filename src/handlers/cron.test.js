@@ -84,6 +84,22 @@ describe('processRemindersAndTimeouts', () => {
         expect(request.status).toBe('answered');
     });
 
+    it('handles errors during auto-forward processing', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const twoHoursAgo = now - 7200;
+
+        await env.DB.prepare(
+            "INSERT INTO requests (id, chat_id, user_id, request_date, expires_at, status, answer_date, answer_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(12, '-100', 42, now - 86400, now + 86400, 'answered', twoHoursAgo, 'my answer').run();
+
+        fetch.mockRejectedValueOnce(new Error('Network failure'));
+
+        const stats = await processRemindersAndTimeouts(env);
+
+        expect(stats.autoForwardsProcessed).toBe(0);
+        expect(stats.errors).toContain('Auto-forward error for 42: Network failure');
+    });
+
     it('processes daily reminders for pending requests older than the interval', async () => {
         const now = Math.floor(Date.now() / 1000);
         const twoDaysAgo = now - (2 * 24 * 3600);
