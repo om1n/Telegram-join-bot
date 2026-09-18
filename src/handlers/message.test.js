@@ -183,7 +183,7 @@ describe('handleAdminCommand - /reject', () => {
     });
 
     it('returns usage message if user ID is not provided', async () => {
-        await handleMessage(createAdminMessage('/reject  a'), env);
+        await handleMessage(createAdminMessage('/reject'), env);
 
         const sendMessageCall = fetch.mock.calls.find(call => call[0].includes('sendMessage'));
         expect(sendMessageCall).toBeDefined();

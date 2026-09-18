@@ -130,7 +130,7 @@ async function handleAdminCommand(text, msg, env) {
         await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
         return;
     }
-    if (text.startsWith('/reject ')) {
+    if (text.startsWith('/reject')) {
         await handleRejectCommand(text, chat_id, env);
         return;
     }
@@ -139,7 +139,7 @@ async function handleAdminCommand(text, msg, env) {
 
 async function handleRejectCommand(text, chat_id, env) {
     const db = env.DB;
-    const targetUserId = text.split(' ')[1];
+    const targetUserId = text.trim().split(/\s+/)[1];
     if (!targetUserId) {
         await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.rejectUsage }, env);
         return;
