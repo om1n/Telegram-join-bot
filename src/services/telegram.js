@@ -34,10 +34,12 @@ export function fullname(from) {
  * @returns {Promise<object|null>} Chat object or null on error
  */
 const chatInfoCache = new Map();
+const pendingRequests = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function __resetChatInfoCache() {
     chatInfoCache.clear();
+    pendingRequests.clear();
 }
 
 export async function getChatInfo(chatId, env) {
@@ -48,18 +50,29 @@ export async function getChatInfo(chatId, env) {
         return cached.data;
     }
 
-    try {
-        const result = await sendToTelegram('getChat', { chat_id: chatId }, env);
-        if (result.ok) {
-            chatInfoCache.set(chatId, { data: result.result, timestamp: now });
-            return result.result;
-        }
-        console.error('Failed to get chat info:', result);
-        return null;
-    } catch (error) {
-        console.error('Error fetching chat info:', error);
-        return null;
+    if (pendingRequests.has(chatId)) {
+        return pendingRequests.get(chatId);
     }
+
+    const fetchPromise = (async () => {
+        try {
+            const result = await sendToTelegram('getChat', { chat_id: chatId }, env);
+            if (result.ok) {
+                chatInfoCache.set(chatId, { data: result.result, timestamp: Date.now() });
+                return result.result;
+            }
+            console.error('Failed to get chat info:', result);
+            return null;
+        } catch (error) {
+            console.error('Error fetching chat info:', error);
+            return null;
+        } finally {
+            pendingRequests.delete(chatId);
+        }
+    })();
+
+    pendingRequests.set(chatId, fetchPromise);
+    return fetchPromise;
 }
 
 /**

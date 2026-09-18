@@ -217,5 +217,35 @@ describe('getChatInfo', () => {
 
         dateNowSpy.mockRestore();
     });
+
+    it('should deduplicate concurrent requests for the same chatId', async () => {
+        // Use a deferred promise to ensure concurrent calls overlap
+        let resolveFetch;
+        const fetchPromise = new Promise(resolve => { resolveFetch = resolve; });
+
+        fetchSpy.mockReturnValue(fetchPromise);
+
+        // Initiate multiple concurrent calls
+        const p1 = getChatInfo('123', mockEnv);
+        const p2 = getChatInfo('123', mockEnv);
+        const p3 = getChatInfo('123', mockEnv);
+
+        // Resolve the mocked fetch
+        resolveFetch({
+            json: async () => ({
+                ok: true,
+                result: { id: '123', title: 'Test Chat' }
+            })
+        });
+
+        const [res1, res2, res3] = await Promise.all([p1, p2, p3]);
+
+        expect(res1).toEqual({ id: '123', title: 'Test Chat' });
+        expect(res2).toEqual({ id: '123', title: 'Test Chat' });
+        expect(res3).toEqual({ id: '123', title: 'Test Chat' });
+
+        // Ensure network was only hit once despite 3 concurrent calls
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
 });
 
