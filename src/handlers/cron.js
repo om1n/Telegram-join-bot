@@ -130,34 +130,7 @@ export async function processTimeouts(env, now) {
             }
 
             if (!rejectRes || !rejectRes.ok) {
-                const desc = rejectRes ? rejectRes.description : 'Unknown';
-                console.error(`reject error (api) for user ${r.user_id}:`, desc);
-
-                if (desc.includes('USER_ID_INVALID') || desc.includes('user is deactivated')) {
-                    dbStatements.push(
-                        stmtUpdateTimeout.bind('user_missing_or_banned', r.id)
-                    );
-                    dbStatements.push(
-                        stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc }))
-                    );
-                    stats.timeoutsProcessed++;
-                    stats.errors.push(`User ${r.user_id} invalid (USER_ID_INVALID/deactivated), marked 'user_missing_or_banned'.`);
-                    return;
-                }
-
-                if (desc.includes('HIDE_REQUESTER_MISSING')) {
-                    dbStatements.push(
-                        stmtUpdateTimeout.bind('request_no_longer_valid', r.id)
-                    );
-                    dbStatements.push(
-                        stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc }))
-                    );
-                    stats.timeoutsProcessed++;
-                    stats.errors.push(`User ${r.user_id} missing request (HIDE_REQUESTER_MISSING), marked 'request_no_longer_valid'.`);
-                    return;
-                }
-
-                stats.errors.push(`API Error for ${r.user_id}: ${desc}`);
+                handleRejectionError(rejectRes, r, now, dbStatements, stats, stmtUpdateTimeout, stmtInsertEvent);
                 return;
             }
 
@@ -215,4 +188,35 @@ export async function processRemindersAndTimeouts(env) {
     // Cleanup duplicates from cron as well
     await cleanupDuplicates(db);
     return stats;
+}
+
+function handleRejectionError(rejectRes, r, now, dbStatements, stats, stmtUpdateTimeout, stmtInsertEvent) {
+    const desc = rejectRes ? rejectRes.description : 'Unknown';
+    console.error(`reject error (api) for user ${r.user_id}:`, desc);
+
+    if (desc.includes('USER_ID_INVALID') || desc.includes('user is deactivated')) {
+        dbStatements.push(
+            stmtUpdateTimeout.bind('user_missing_or_banned', r.id)
+        );
+        dbStatements.push(
+            stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_invalid', now, JSON.stringify({ reason: 'api_error_invalid', error: desc }))
+        );
+        stats.timeoutsProcessed++;
+        stats.errors.push(`User ${r.user_id} invalid (USER_ID_INVALID/deactivated), marked 'user_missing_or_banned'.`);
+        return;
+    }
+
+    if (desc.includes('HIDE_REQUESTER_MISSING')) {
+        dbStatements.push(
+            stmtUpdateTimeout.bind('request_no_longer_valid', r.id)
+        );
+        dbStatements.push(
+            stmtInsertEvent.bind(r.id, r.user_id, 'auto_rejected_missing', now, JSON.stringify({ reason: 'api_error_missing', error: desc }))
+        );
+        stats.timeoutsProcessed++;
+        stats.errors.push(`User ${r.user_id} missing request (HIDE_REQUESTER_MISSING), marked 'request_no_longer_valid'.`);
+        return;
+    }
+
+    stats.errors.push(`API Error for ${r.user_id}: ${desc}`);
 }
