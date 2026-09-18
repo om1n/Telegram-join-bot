@@ -172,3 +172,6 @@ wrangler.toml
 
 # Claude Code
 .claude/
+
+# IDE
+.idea/
