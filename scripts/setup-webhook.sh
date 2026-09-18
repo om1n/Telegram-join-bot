@@ -3,10 +3,10 @@ echo "Setup Telegram Webhook with correct allowed_updates"
 echo "---------------------------------------------------"
 read -p "Enter your Telegram Bot Token: " TOKEN
 read -p "Enter your Worker URL (e.g. https://my-bot.workers.dev/telegram): " URL
-read -p "Enter your Webhook Secret Token (optional, press Enter to skip): " SECRET
+read -p "Enter your Webhook Secret Token (matches WEBHOOK_SECRET): " SECRET
 
-if [ -z "$TOKEN" ] || [ -z "$URL" ]; then
-  echo "Token and URL are required."
+if [ -z "$TOKEN" ] || [ -z "$URL" ] || [ -z "$SECRET" ]; then
+  echo "Token, URL, and Secret Token are required."
   exit 1
 fi
 

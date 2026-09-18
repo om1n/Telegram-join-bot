@@ -6,7 +6,7 @@ CREATE TABLE requests (
 	display_name TEXT,
 	request_date INTEGER NOT NULL,
 	expires_at INTEGER NOT NULL,
-	status TEXT NOT NULL DEFAULT 'pending', -- pending, answered, confirmed, rejected, timed_out, user_missing_or_banned, request_no_longer_valid
+	status TEXT NOT NULL DEFAULT 'pending', -- pending, answered, confirmed, rejected, timed_out, superseded, user_missing_or_banned, request_no_longer_valid
 	answer_text TEXT,
 	answer_date INTEGER,
 	confirmed_date INTEGER,
