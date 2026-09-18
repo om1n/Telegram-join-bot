@@ -89,52 +89,59 @@ async function handleAdminCommand(text, msg, env) {
     const db = env.DB;
     const chat_id = msg.chat.id;
 
-    if (text.startsWith('/status')) {
-        const res = await db.prepare("SELECT COUNT(*) as c FROM requests WHERE status = 'pending'").all();
-        const c = res.results[0].c || 0;
-        await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.status(c) }, env);
-        return;
+    const command = text.trim().split(/\s+/)[0];
+
+    switch (command) {
+        case '/status': {
+            const res = await db.prepare("SELECT COUNT(*) as c FROM requests WHERE status = 'pending'").all();
+            const c = res.results[0].c || 0;
+            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.status(c) }, env);
+            return;
+        }
+        case '/pending': {
+            const rows = await db.prepare("SELECT id,user_id,username,display_name,request_date,answer_text FROM requests WHERE status = 'pending' ORDER BY request_date DESC LIMIT 50").all();
+            const list = rows.results.map(r => {
+                const name = r.username ? ('@' + r.username) : r.display_name;
+                const date = new Date(r.request_date * 1000).toISOString();
+                const answered = r.answer_text ? 'Да' : 'Нет';
+                return `ID:${r.id} UID:${r.user_id} ${name} Подана:${date} Ответ:${answered}`;
+            }).join('\n') || MESSAGES.admin.emptyPending;
+            await sendToTelegram('sendMessage', { chat_id, text: list }, env);
+            return;
+        }
+        case '/config': {
+            const cfg = MESSAGES.admin.config(env.MOD_CHAT_ID, env.ADMIN_USER_ID);
+            await sendToTelegram('sendMessage', { chat_id, text: cfg }, env);
+            return;
+        }
+        case '/help': {
+            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.help }, env);
+            return;
+        }
+        case '/cleanup': {
+            await cleanupDuplicates(db);
+            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.cleanupSuccess }, env);
+            return;
+        }
+        case '/force_cron': {
+            const result = await processRemindersAndTimeouts(env);
+            const forceCronMsg = MESSAGES.admin.forceCron(
+                result ? result.remindersSent : 0,
+                result ? result.timeoutsProcessed : 0,
+                result ? result.errors : []
+            );
+            await sendToTelegram('sendMessage', { chat_id, text: forceCronMsg }, env);
+            return;
+        }
+        case '/reject': {
+            await handleRejectCommand(text, chat_id, env);
+            return;
+        }
+        default: {
+            await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.unknown }, env);
+            return;
+        }
     }
-    if (text.startsWith('/pending')) {
-        const rows = await db.prepare("SELECT id,user_id,username,display_name,request_date,answer_text FROM requests WHERE status = 'pending' ORDER BY request_date DESC LIMIT 50").all();
-        const list = rows.results.map(r => {
-            const name = r.username ? ('@' + r.username) : r.display_name;
-            const date = new Date(r.request_date * 1000).toISOString();
-            const answered = r.answer_text ? 'Да' : 'Нет';
-            return `ID:${r.id} UID:${r.user_id} ${name} Подана:${date} Ответ:${answered}`;
-        }).join('\n') || MESSAGES.admin.emptyPending;
-        await sendToTelegram('sendMessage', { chat_id, text: list }, env);
-        return;
-    }
-    if (text.startsWith('/config')) {
-        const cfg = MESSAGES.admin.config(env.MOD_CHAT_ID, env.ADMIN_USER_ID);
-        await sendToTelegram('sendMessage', { chat_id, text: cfg }, env);
-        return;
-    }
-    if (text.startsWith('/help')) {
-        await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.help }, env);
-        return;
-    }
-    if (text.startsWith('/cleanup')) {
-        await cleanupDuplicates(db);
-        await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.cleanupSuccess }, env);
-        return;
-    }
-    if (text.startsWith('/force_cron')) {
-        const result = await processRemindersAndTimeouts(env);
-        const msg = MESSAGES.admin.forceCron(
-            result ? result.remindersSent : 0,
-            result ? result.timeoutsProcessed : 0,
-            result ? result.errors : []
-        );
-        await sendToTelegram('sendMessage', { chat_id, text: msg }, env);
-        return;
-    }
-    if (text.startsWith('/reject')) {
-        await handleRejectCommand(text, chat_id, env);
-        return;
-    }
-    await sendToTelegram('sendMessage', { chat_id, text: MESSAGES.admin.unknown }, env);
 }
 
 async function handleRejectCommand(text, chat_id, env) {
